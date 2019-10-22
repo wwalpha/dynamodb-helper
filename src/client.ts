@@ -1,14 +1,42 @@
-import * as AWS from 'aws-sdk';
-import { Configurations } from './helper';
+import { DynamoDB } from 'aws-sdk';
+import XRay from 'aws-xray-sdk';
 
-export const client = (configs?: Configurations) => {
-  if (!configs) {
-    return new AWS.DynamoDB.DocumentClient();
+type XRayOption = {
+  xray?: boolean;
+};
+
+export type DocumentClientOptions = DynamoDB.DocumentClient.DocumentClientOptions & DynamoDB.Types.ClientConfiguration & XRayOption;
+export type ClientOptions = DynamoDB.ClientConfiguration & XRayOption;
+
+/**
+ *
+ */
+export const documentClient = (
+  options: DocumentClientOptions = {
+    region: process.env.AWS_DEFAULT_REGION as string,
   }
-  return new AWS.DynamoDB.DocumentClient(configs.options);
+): DynamoDB.DocumentClient => {
+  if (!options) return new DynamoDB.DocumentClient();
 
-  // if (configs.xray) {
-  //   // const DocumentClient = XRay.captureAWSClient<AWS.DynamoDB.DocumentClient>(require('aws-sdk'));
-  //   // return new DocumentClient();
-  // }
+  let AWS = require('aws-sdk');
+
+  if (options.xray === true) {
+    AWS = XRay.captureAWS(AWS);
+  }
+
+  return new AWS.DynamoDB.DocumentClient(options);
+};
+
+export const client = (
+  options: ClientOptions = {
+    region: process.env.AWS_DEFAULT_REGION as string,
+  }
+): DynamoDB => {
+  let AWS = require('aws-sdk');
+
+  if (options.xray) {
+    AWS = XRay.captureAWS(AWS);
+  }
+
+  return new AWS.DynamoDB(options);
 };

@@ -1,19 +1,19 @@
 {
   "name": "dynamodb-utils",
   "version": "1.0.0",
-  "main": "index.js",
-  "repository": "https://github.com/wwalpha/dynamodb-utils.git",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "repository": "https://github.com/wwalpha/dynamodb-helper.git",
   "author": "wwalpha <wwalpha@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^12.7.4",
-    "@types/webpack": "^4.39.1",
     "tslint": "^5.20.0",
-    "typescript": "^3.6.3",
-    "webpack": "^4.39.3",
-    "webpack-cli": "^3.3.8"
+    "typescript": "^3.6.3"
   },
   "dependencies": {
-    "aws-sdk": "^2.526.0"
+    "aws-sdk": "^2.553.0",
+    "aws-xray-sdk": "^2.4.0",
+    "log4js": "^5.2.2"
   }
 }

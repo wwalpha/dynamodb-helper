@@ -1,11 +1,21 @@
-import { Helper } from '../lib';
+import * as DynamoDBHelper from '../lib';
 
-const helper = new Helper({
-  logger: {
-    appenders: { console: { type: 'console' } },
-    categories: { default: { appenders: ['console'], level: 'info' } },
-  },
-});
+// const helper = new Helper({
+//   logger: {
+//     appenders: { console: { type: 'console' } },
+//     categories: { default: { appenders: ['console'], level: 'info' } },
+//   },
+// });
+console.log(DynamoDBHelper);
+
+// DynamoDBHelper.config.update({
+//   logger: {
+//     appenders: { console: { type: 'console' } },
+//     categories: { default: { appenders: ['console'], level: 'info' } },
+//   },
+// });
+
+const helper = new DynamoDBHelper.Helper();
 
 (async () => {
   const results = await helper.scan({

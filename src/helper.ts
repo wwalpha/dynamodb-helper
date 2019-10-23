@@ -27,16 +27,19 @@ export class Helper {
     return client(this.configs.options);
   };
 
+  /** Get */
+  getRequest = (input: DynamoDB.DocumentClient.GetItemInput) => {
+    Logger.info('DynamoDB get item input', input);
+
+    return this.getDocumentClient().get(input);
+  };
+
   /**
    *
    */
   get = async (input: DynamoDB.DocumentClient.GetItemInput): Promise<DynamoDB.DocumentClient.GetItemOutput | undefined> => {
-    Logger.info('DynamoDB get item input', input);
-
     try {
-      const result = await this.getDocumentClient()
-        .get(input)
-        .promise();
+      const result = await this.getRequest(input).promise();
 
       // データが存在しない
       if (!result.Item) return;
@@ -55,6 +58,21 @@ export class Helper {
       Logger.error('DynamoDB get item error.', err.message, err);
       throw err;
     }
+  };
+
+  /** Put */
+  putRequest = (input: DynamoDB.DocumentClient.PutItemInput) => {
+    Logger.info('DynamoDB put item input', input);
+
+    return this.getDocumentClient().put(input);
+  };
+
+  put = async (input: DynamoDB.DocumentClient.PutItemInput) => {
+    const result = await this.putRequest(input).promise();
+
+    Logger.info('DynamoDB put item success.');
+
+    return result;
   };
 
   /** Query */

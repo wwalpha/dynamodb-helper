@@ -6,10 +6,15 @@ export declare class Helper {
     constructor(configs?: Configurations);
     private getDocumentClient;
     private getClient;
+    /** Get */
+    getRequest: (input: DynamoDB.DocumentClient.GetItemInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.GetItemOutput, import("aws-sdk").AWSError>;
     /**
      *
      */
     get: (input: DynamoDB.DocumentClient.GetItemInput) => Promise<DynamoDB.DocumentClient.GetItemOutput | undefined>;
+    /** Put */
+    putRequest: (input: DynamoDB.DocumentClient.PutItemInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.PutItemOutput, import("aws-sdk").AWSError>;
+    put: (input: DynamoDB.DocumentClient.PutItemInput) => Promise<import("aws-sdk/lib/request").PromiseResult<DynamoDB.DocumentClient.PutItemOutput, import("aws-sdk").AWSError>>;
     /** Query */
     queryRequest: (input: DynamoDB.DocumentClient.QueryInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.QueryOutput, import("aws-sdk").AWSError>;
     /** Query */

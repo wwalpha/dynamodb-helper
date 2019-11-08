@@ -69,4 +69,4 @@ const helper = new Helper({
 | deleteRequest | Delete item request          |
 | truncateAll   | truncate all records         |
 | truncate      | truncate records with inputs |
-| bulk          | 全件登録                     |
+| bulk          | Insert all records                     |

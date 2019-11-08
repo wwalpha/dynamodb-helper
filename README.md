@@ -51,7 +51,7 @@ const helper = new Helper({
 })();
 ```
 
-## DynamoDB Function List
+## Functions
 
 | Name          | Description                  |
 | ------------- | ---------------------------- |

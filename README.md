@@ -51,7 +51,7 @@ const helper = new Helper({
 })();
 ```
 
-## Functions
+## Methods
 
 | Name          | Description                  |
 | ------------- | ---------------------------- |

@@ -51,7 +51,7 @@ const helper = new Helper({
 })();
 ```
 
-## Dynamodb Function List
+## DynamoDB Function List
 
 | Name          | Description                  |
 | ------------- | ---------------------------- |
@@ -69,4 +69,4 @@ const helper = new Helper({
 | deleteRequest | Delete item request          |
 | truncateAll   | truncate all records         |
 | truncate      | truncate records with inputs |
-| bulk          | Insert all records                     |
+| bulk          | Insert all records           |

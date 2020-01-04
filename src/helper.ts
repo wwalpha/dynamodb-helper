@@ -1,4 +1,6 @@
-import { DynamoDB } from 'aws-sdk';
+import { AWSError, Request } from 'aws-sdk';
+import { PromiseResult } from 'aws-sdk/lib/request';
+import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { client, documentClient } from './client';
 import Logger from './logger';
 import { Configurations, config } from './config';
@@ -15,7 +17,7 @@ export class Helper {
     }
   }
 
-  private getDocumentClient = () => {
+  private getDocumentClient = (): DocumentClient => {
     if (!this.configs || !this.configs.options) return documentClient();
 
     return documentClient(this.configs.options);
@@ -28,7 +30,7 @@ export class Helper {
   };
 
   /** Get */
-  getRequest = (input: DynamoDB.DocumentClient.GetItemInput) => {
+  getRequest = (input: DocumentClient.GetItemInput): Request<DocumentClient.GetItemOutput, AWSError> => {
     Logger.info('DynamoDB get item input', input);
 
     return this.getDocumentClient().get(input);
@@ -37,7 +39,7 @@ export class Helper {
   /**
    *
    */
-  get = async (input: DynamoDB.DocumentClient.GetItemInput): Promise<DynamoDB.DocumentClient.GetItemOutput | undefined> => {
+  get = async (input: DocumentClient.GetItemInput): Promise<DocumentClient.GetItemOutput | undefined> => {
     try {
       const result = await this.getRequest(input).promise();
 
@@ -45,9 +47,9 @@ export class Helper {
       if (!result.Item) return;
 
       // 返却値設定
-      const ret: DynamoDB.DocumentClient.GetItemOutput = {
+      const ret: DocumentClient.GetItemOutput = {
         ConsumedCapacity: result.ConsumedCapacity,
-        Item: result.Item,
+        Item: result.Item
       };
 
       Logger.info('DynamoDB get item success.');
@@ -61,13 +63,13 @@ export class Helper {
   };
 
   /** Put */
-  putRequest = (input: DynamoDB.DocumentClient.PutItemInput) => {
+  putRequest = (input: DocumentClient.PutItemInput) => {
     Logger.info('DynamoDB put item input', input);
 
     return this.getDocumentClient().put(input);
   };
 
-  put = async (input: DynamoDB.DocumentClient.PutItemInput) => {
+  put = async (input: DocumentClient.PutItemInput): Promise<PromiseResult<DocumentClient.PutItemOutput, AWSError>> => {
     const result = await this.putRequest(input).promise();
 
     Logger.info('DynamoDB put item success.');
@@ -76,14 +78,14 @@ export class Helper {
   };
 
   /** Query */
-  queryRequest = (input: DynamoDB.DocumentClient.QueryInput) => {
+  queryRequest = (input: DocumentClient.QueryInput) => {
     Logger.info('DynamoDB query input', input);
 
     return this.getDocumentClient().query(input);
   };
 
   /** Query */
-  query = async (input: DynamoDB.DocumentClient.QueryInput) => {
+  query = async (input: DocumentClient.QueryInput) => {
     // クエリ実行
     const result = await this.queryRequest(input).promise();
 
@@ -120,7 +122,9 @@ export class Helper {
     return result;
   };
 
-  transactWrite = async (input: DynamoDB.DocumentClient.TransactWriteItemsInput): Promise<DynamoDB.DocumentClient.TransactWriteItemsOutput> => {
+  transactWrite = async (
+    input: DocumentClient.TransactWriteItemsInput
+  ): Promise<DocumentClient.TransactWriteItemsOutput> => {
     Logger.info('Dynamodb transactWrite input', JSON.stringify(input));
 
     const result = await this.getDocumentClient()
@@ -131,18 +135,18 @@ export class Helper {
 
     return {
       ConsumedCapacity: result.ConsumedCapacity,
-      ItemCollectionMetrics: result.ItemCollectionMetrics,
+      ItemCollectionMetrics: result.ItemCollectionMetrics
     };
   };
 
   /** Scan */
-  scanRequest = (input: DynamoDB.DocumentClient.ScanInput) => {
+  scanRequest = (input: DocumentClient.ScanInput) => {
     Logger.info('DynamoDB scan input', input);
 
     return this.getDocumentClient().scan(input);
   };
 
-  scan = async (input: DynamoDB.DocumentClient.ScanInput) => {
+  scan = async (input: DocumentClient.ScanInput) => {
     // クエリ実行
     const results = await this.scanRequest(input).promise();
 
@@ -169,13 +173,13 @@ export class Helper {
   };
 
   /** Update */
-  updateRequest = (input: DynamoDB.DocumentClient.UpdateItemInput) => {
+  updateRequest = (input: DocumentClient.UpdateItemInput) => {
     Logger.info('Dynamodb update item input', input);
 
     return this.getDocumentClient().update(input);
   };
 
-  update = async (input: DynamoDB.DocumentClient.UpdateItemInput) => {
+  update = async (input: DocumentClient.UpdateItemInput) => {
     const result = await this.updateRequest(input).promise();
 
     Logger.info('DynamoDB update success.');
@@ -184,13 +188,13 @@ export class Helper {
   };
 
   /** Delete */
-  deleteRequest = (input: DynamoDB.DocumentClient.DeleteItemInput) => {
+  deleteRequest = (input: DocumentClient.DeleteItemInput) => {
     Logger.info('Dynamodb delete item input', input);
 
     return this.getDocumentClient().delete(input);
   };
 
-  delete = async (input: DynamoDB.DocumentClient.DeleteItemInput) => {
+  delete = async (input: DocumentClient.DeleteItemInput) => {
     const result = await this.deleteRequest(input).promise();
 
     Logger.info('DynamoDB delete success.');
@@ -202,7 +206,7 @@ export class Helper {
   private tableSchema = async (tableName: string) => {
     const table = await this.getClient()
       .describeTable({
-        TableName: tableName,
+        TableName: tableName
       })
       .promise();
 
@@ -215,13 +219,13 @@ export class Helper {
   };
 
   /** バッチ削除リクエストを作成 */
-  private batchDeleteRequest = async (tableName: string, records: DynamoDB.DocumentClient.AttributeMap[]) => {
+  private batchDeleteRequest = async (tableName: string, records: DocumentClient.AttributeMap[]) => {
     // テーブル情報を取得する
     const keySchema = await this.tableSchema(tableName);
 
     const keys = keySchema.map((item: any) => item.AttributeName);
-    const requests: DynamoDB.DocumentClient.WriteRequests[] = [];
-    const writeRequests: DynamoDB.DocumentClient.WriteRequests = [];
+    const requests: DocumentClient.WriteRequests[] = [];
+    const writeRequests: DocumentClient.WriteRequests = [];
 
     // リクエストを作成する
     for (let idx = 0; idx < records.length; idx = idx + 1) {
@@ -235,8 +239,8 @@ export class Helper {
 
       writeRequests.push({
         DeleteRequest: {
-          Key: keyItem,
-        },
+          Key: keyItem
+        }
       });
 
       // 25件ごと、requestを作成する
@@ -253,9 +257,9 @@ export class Helper {
   };
 
   /** バッチ登録リクエストを作成 */
-  private batchPutRequest = (records: DynamoDB.DocumentClient.AttributeMap[]) => {
-    const requests: DynamoDB.DocumentClient.WriteRequests[] = [];
-    const writeRequests: DynamoDB.DocumentClient.WriteRequests = [];
+  private batchPutRequest = (records: DocumentClient.AttributeMap[]) => {
+    const requests: DocumentClient.WriteRequests[] = [];
+    const writeRequests: DocumentClient.WriteRequests = [];
 
     // リクエストを作成する
     for (let idx = 0; idx < records.length; idx = idx + 1) {
@@ -263,8 +267,8 @@ export class Helper {
 
       writeRequests.push({
         PutRequest: {
-          Item: item,
-        },
+          Item: item
+        }
       });
 
       // 25件ごと、requestを作成する
@@ -281,21 +285,21 @@ export class Helper {
   };
 
   /** バッチリクエストを実行する */
-  private process = async (tableName: string, requests: DynamoDB.DocumentClient.WriteRequests[]) => {
+  private process = async (tableName: string, requests: DocumentClient.WriteRequests[]) => {
     const tasks = requests.map(
       (item, idx) =>
         new Promise(async resolve => {
           Logger.debug(`Queue${idx + 1}, in flight items: ${item.length}`);
 
-          let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap = {
-            [tableName]: item,
+          let unprocessed: DocumentClient.BatchWriteItemRequestMap = {
+            [tableName]: item
           };
 
           // tslint:disable-next-line: space-in-parens
           for (; Object.keys(unprocessed).length > 0 && unprocessed[tableName].length !== 0; ) {
             const results = await this.getDocumentClient()
               .batchWrite({
-                RequestItems: unprocessed,
+                RequestItems: unprocessed
               })
               .promise();
 
@@ -322,7 +326,7 @@ export class Helper {
    */
   truncateAll = async (tableName: string) => {
     const values = await this.scan({
-      TableName: tableName,
+      TableName: tableName
     });
 
     // データが存在しない
@@ -334,7 +338,7 @@ export class Helper {
   /**
    * 一括削除（一部削除）
    */
-  truncate = async (tableName: string, records: DynamoDB.DocumentClient.AttributeMap[]) => {
+  truncate = async (tableName: string, records: DocumentClient.AttributeMap[]) => {
     Logger.info(`DynamoDB truncate start... ${tableName}`);
 
     // リクエスト作成
@@ -348,7 +352,7 @@ export class Helper {
   /**
    * 一括登録
    */
-  bulk = async (tableName: string, records: DynamoDB.DocumentClient.AttributeMap[]) => {
+  bulk = async (tableName: string, records: DocumentClient.AttributeMap[]) => {
     Logger.info(`DynamoDB bulk insert start... ${tableName}`);
     Logger.debug(`DynamoDB bulk insert records`, records);
 

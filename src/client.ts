@@ -34,7 +34,7 @@ export const client = (
 ): DynamoDB => {
   let AWS = require('aws-sdk');
 
-  if (options.xray) {
+  if (options.xray === true) {
     AWS = XRay.captureAWS(AWS);
   }
 

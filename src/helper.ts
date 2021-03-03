@@ -15,12 +15,12 @@ export class DynamodbHelper {
   }
 
   /** dynamodb document client */
-  private getDocumentClient = (): DynamoDB.DocumentClient => {
+  getDocumentClient = (): DynamoDB.DocumentClient => {
     return documentClient(this.configs.getOptions());
   };
 
   /** dynamodb client */
-  private getClient = () => {
+  getClient = () => {
     return client(this.configs.getOptions());
   };
 

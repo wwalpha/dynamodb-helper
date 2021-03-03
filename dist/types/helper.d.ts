@@ -6,9 +6,9 @@ export declare class DynamodbHelper {
     configs: Configs;
     constructor(configs?: Configurations);
     /** dynamodb document client */
-    private getDocumentClient;
+    getDocumentClient: () => DynamoDB.DocumentClient;
     /** dynamodb client */
-    private getClient;
+    getClient: () => DynamoDB;
     /** Get */
     getRequest: (input: DynamoDB.DocumentClient.GetItemInput) => Request<DynamoDB.DocumentClient.GetItemOutput, AWSError>;
     /**

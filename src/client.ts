@@ -1,42 +1,63 @@
 import { DynamoDB } from 'aws-sdk';
-import XRay from 'aws-xray-sdk';
+import AWSXRay from 'aws-xray-sdk-core';
 
-type XRayOption = {
+AWSXRay.enableAutomaticMode();
+AWSXRay.setContextMissingStrategy('LOG_ERROR');
+
+type XRayOptions = {
   xray?: boolean;
 };
 
-export type DocumentClientOptions = DynamoDB.DocumentClient.DocumentClientOptions & DynamoDB.Types.ClientConfiguration & XRayOption;
-export type ClientOptions = DynamoDB.ClientConfiguration & XRayOption;
+export type DocumentClientOptions = DynamoDB.DocumentClient.DocumentClientOptions &
+  DynamoDB.Types.ClientConfiguration &
+  XRayOptions;
+export type ClientOptions = DynamoDB.ClientConfiguration & XRayOptions;
 
 /**
- *
+ * table data item client
  */
 export const documentClient = (
   options: DocumentClientOptions = {
     region: process.env.AWS_DEFAULT_REGION as string,
   }
 ): DynamoDB.DocumentClient => {
-  if (!options) return new DynamoDB.DocumentClient();
-
-  let AWS = require('aws-sdk');
-
-  if (options.xray === true) {
-    AWS = XRay.captureAWS(AWS);
+  if (!options.region) {
+    options.region = process.env.AWS_DEFAULT_REGION;
   }
 
-  return new AWS.DynamoDB.DocumentClient(options);
+  if (options.xray === true) {
+    const client = new DynamoDB.DocumentClient({
+      service: new DynamoDB(options),
+      ...options,
+    });
+
+    AWSXRay.captureAWSClient((client as any).service);
+
+    return client;
+  }
+
+  return new DynamoDB.DocumentClient(options);
 };
 
+/**
+ * table client
+ *
+ * @param options
+ */
 export const client = (
   options: ClientOptions = {
     region: process.env.AWS_DEFAULT_REGION as string,
   }
 ): DynamoDB => {
-  let AWS = require('aws-sdk');
-
-  if (options.xray === true) {
-    AWS = XRay.captureAWS(AWS);
+  if (!options.region) {
+    options.region = process.env.AWS_DEFAULT_REGION;
   }
 
-  return new AWS.DynamoDB(options);
+  const client = new DynamoDB(options);
+
+  if (options.xray === true) {
+    return AWSXRay.captureAWSClient(client);
+  }
+
+  return client;
 };

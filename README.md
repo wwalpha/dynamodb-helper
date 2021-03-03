@@ -24,12 +24,12 @@ import { Helper } from 'dynamodb-helper';
 const helper = new Helper({
   logger: {
     appenders: { console: { type: 'console' } },
-    categories: { default: { appenders: ['console'], level: 'info' } }
+    categories: { default: { appenders: ['console'], level: 'info' } },
   },
   options: {
     endpoint: 'http://localhost:8001',
-    region: 'ap=northeast-1'
-  }
+    region: 'ap=northeast-1',
+  },
 });
 
 (async () => {
@@ -37,7 +37,7 @@ const helper = new Helper({
 
   // scan
   const results = await helper.scan({
-    TableName: tableName
+    TableName: tableName,
   });
 
   // truncateAll

@@ -5,16 +5,20 @@ import AWSXRay from 'aws-xray-sdk-core';
   const helper = new DynamodbHelper({
     options: {
       xray: false,
+      region: 'ap-northeast-1',
+      endpoint: 'http://localhost:6666',
     },
   });
 
-  const tableName = 'AutoNotification_History';
+  console.log(helper.getDocumentClient());
 
-  const results = await helper.scan({
-    TableName: tableName,
-  });
+  // const tableName = 'AutoNotification_History';
 
-  console.log(results.Count);
+  // const results = await helper.scan({
+  //   TableName: tableName,
+  // });
+
+  // console.log(results.Count);
 
   // console.log(results);
   // await helper.get({

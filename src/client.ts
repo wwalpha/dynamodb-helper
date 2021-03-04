@@ -21,8 +21,14 @@ export const documentClient = (
     region: process.env.AWS_DEFAULT_REGION as string,
   }
 ): DynamoDB.DocumentClient => {
+  // region attribute
   if (!options.region) {
     options.region = process.env.AWS_DEFAULT_REGION;
+  }
+
+  // endpoint
+  if (!options.endpoint && process.env.DYNAMODB_ENDPOINT_URL) {
+    options.endpoint = process.env.DYNAMODB_ENDPOINT_URL;
   }
 
   if (options.xray === true) {
@@ -49,8 +55,14 @@ export const client = (
     region: process.env.AWS_DEFAULT_REGION as string,
   }
 ): DynamoDB => {
+  // region attribute
   if (!options.region) {
     options.region = process.env.AWS_DEFAULT_REGION;
+  }
+
+  // endpoint
+  if (!options.endpoint && process.env.DYNAMODB_ENDPOINT_URL) {
+    options.endpoint = process.env.DYNAMODB_ENDPOINT_URL;
   }
 
   const client = new DynamoDB(options);

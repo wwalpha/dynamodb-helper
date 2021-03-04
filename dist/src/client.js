@@ -14,8 +14,13 @@ aws_xray_sdk_core_1.default.setContextMissingStrategy('LOG_ERROR');
 const documentClient = (options = {
     region: process.env.AWS_DEFAULT_REGION,
 }) => {
+    // region attribute
     if (!options.region) {
         options.region = process.env.AWS_DEFAULT_REGION;
+    }
+    // endpoint
+    if (!options.endpoint && process.env.DYNAMODB_ENDPOINT_URL) {
+        options.endpoint = process.env.DYNAMODB_ENDPOINT_URL;
     }
     if (options.xray === true) {
         const client = new aws_sdk_1.DynamoDB.DocumentClient({
@@ -36,8 +41,13 @@ exports.documentClient = documentClient;
 const client = (options = {
     region: process.env.AWS_DEFAULT_REGION,
 }) => {
+    // region attribute
     if (!options.region) {
         options.region = process.env.AWS_DEFAULT_REGION;
+    }
+    // endpoint
+    if (!options.endpoint && process.env.DYNAMODB_ENDPOINT_URL) {
+        options.endpoint = process.env.DYNAMODB_ENDPOINT_URL;
     }
     const client = new aws_sdk_1.DynamoDB(options);
     if (options.xray === true) {

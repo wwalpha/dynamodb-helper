@@ -19,8 +19,8 @@ const documentClient = (options = {
         options.region = process.env.AWS_DEFAULT_REGION;
     }
     // endpoint
-    if (!options.endpoint && process.env.DYNAMODB_ENDPOINT_URL) {
-        options.endpoint = process.env.DYNAMODB_ENDPOINT_URL;
+    if (!options.endpoint && process.env.AWS_ENDPOINT_URL) {
+        options.endpoint = process.env.AWS_ENDPOINT_URL;
     }
     if (options.xray === true) {
         const client = new aws_sdk_1.DynamoDB.DocumentClient({
@@ -46,8 +46,8 @@ const client = (options = {
         options.region = process.env.AWS_DEFAULT_REGION;
     }
     // endpoint
-    if (!options.endpoint && process.env.DYNAMODB_ENDPOINT_URL) {
-        options.endpoint = process.env.DYNAMODB_ENDPOINT_URL;
+    if (!options.endpoint && process.env.AWS_ENDPOINT_URL) {
+        options.endpoint = process.env.AWS_ENDPOINT_URL;
     }
     const client = new aws_sdk_1.DynamoDB(options);
     if (options.xray === true) {

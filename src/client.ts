@@ -27,8 +27,8 @@ export const documentClient = (
   }
 
   // endpoint
-  if (!options.endpoint && process.env.DYNAMODB_ENDPOINT_URL) {
-    options.endpoint = process.env.DYNAMODB_ENDPOINT_URL;
+  if (!options.endpoint && process.env.AWS_ENDPOINT_URL) {
+    options.endpoint = process.env.AWS_ENDPOINT_URL;
   }
 
   if (options.xray === true) {
@@ -61,8 +61,8 @@ export const client = (
   }
 
   // endpoint
-  if (!options.endpoint && process.env.DYNAMODB_ENDPOINT_URL) {
-    options.endpoint = process.env.DYNAMODB_ENDPOINT_URL;
+  if (!options.endpoint && process.env.AWS_ENDPOINT_URL) {
+    options.endpoint = process.env.AWS_ENDPOINT_URL;
   }
 
   const client = new DynamoDB(options);

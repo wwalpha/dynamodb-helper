@@ -23,7 +23,6 @@ class Configs {
             if (configs.options) {
                 this.options = { ...this.options, ...configs.options };
             }
-            console.log(this.options);
         };
         /** get credentials */
         this.getCredentials = () => this.options.credentials;

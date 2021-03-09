@@ -268,9 +268,9 @@ class DynamodbHelper {
                 TableName: tableName,
             });
             // データが存在しない
-            if (!values?.Items)
+            if (!values.Items)
                 return;
-            return await this.truncate(tableName, values?.Items);
+            return await this.truncate(tableName, values.Items);
         };
         /**
          * 一括削除（一部削除）

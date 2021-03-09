@@ -401,9 +401,9 @@ export class DynamodbHelper {
     });
 
     // データが存在しない
-    if (!values?.Items) return;
+    if (!values.Items) return;
 
-    return await this.truncate(tableName, values?.Items as any);
+    return await this.truncate(tableName, values.Items as any);
   };
 
   /**

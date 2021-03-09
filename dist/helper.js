@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DynamodbHelper = void 0;
+const omit_1 = __importDefault(require("lodash/omit"));
 const client_1 = require("./client");
 const logger_1 = __importDefault(require("./logger"));
 const configs_1 = require("./configs");
@@ -40,7 +41,10 @@ class DynamodbHelper {
                 };
                 logger_1.default.info('DynamoDB get item success.');
                 logger_1.default.debug('DynamoDB item: ', ret);
-                return ret;
+                return {
+                    ...omit_1.default(result, ['$response']),
+                    Item: result.Item,
+                };
             }
             catch (err) {
                 logger_1.default.error('DynamoDB get item error.', err.message, err);
@@ -52,10 +56,14 @@ class DynamodbHelper {
             logger_1.default.info('DynamoDB put item input', input);
             return this.getDocumentClient().put(input);
         };
+        /** put item */
         this.put = async (input) => {
             const result = await this.putRequest(input).promise();
             logger_1.default.info('DynamoDB put item success.');
-            return result;
+            return {
+                ...omit_1.default(result, ['$response']),
+                Attributes: result.Attributes,
+            };
         };
         /** Query */
         this.queryRequest = (input) => {
@@ -65,32 +73,41 @@ class DynamodbHelper {
         /** Query */
         this.query = async (input) => {
             // クエリ実行
-            const result = await this.queryRequest(input).promise();
+            const results = await this.queryRequest(input).promise();
             // 上限ある場合、そのまま終了
-            if (input.Limit && input.Limit === result.Count) {
-                logger_1.default.info('DynamoDB query success.', `Count=${result.Count}`);
-                logger_1.default.debug('DynamoDB query items.', result, result.Items);
-                return result;
+            if (input.Limit && input.Limit === results.Count) {
+                logger_1.default.info('DynamoDB query success.', `Count=${results.Count}`);
+                logger_1.default.debug('DynamoDB query items.', results, results.Items);
+                return {
+                    ...omit_1.default(results, ['$response']),
+                    Items: results.Items,
+                };
             }
-            if (result.LastEvaluatedKey) {
-                const lastResult = await this.query({ ...input, ExclusiveStartKey: result.LastEvaluatedKey });
-                if (result.Items && lastResult.Items) {
-                    result.Items = result.Items.concat(lastResult.Items);
+            if (results.LastEvaluatedKey) {
+                const lastResult = await this.query({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
+                if (results.Items && lastResult?.Items) {
+                    results.Items = results.Items.concat(lastResult.Items);
                 }
-                if (result.Count && lastResult.Count) {
-                    result.Count = result.Count + lastResult.Count;
+                if (results.Count && lastResult?.Count) {
+                    results.Count = results.Count + lastResult.Count;
                 }
-                if (result.ScannedCount && lastResult.ScannedCount) {
-                    result.ScannedCount = result.ScannedCount + lastResult.ScannedCount;
+                if (results.ScannedCount && lastResult?.ScannedCount) {
+                    results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
                 }
             }
-            logger_1.default.info('DynamoDB query success.', `Count=${result.Count}`);
-            logger_1.default.debug('DynamoDB query items.', result, result.Items);
+            logger_1.default.info('DynamoDB query success.', `Count=${results.Count}`);
+            logger_1.default.debug('DynamoDB query items.', results, results.Items);
             // 上限ある場合、そのまま終了
-            if (input.Limit && input.Limit === result.Count) {
-                return result;
+            if (input.Limit && input.Limit === results.Count) {
+                return {
+                    ...omit_1.default(results, ['$response']),
+                    Items: results.Items,
+                };
             }
-            return result;
+            return {
+                ...omit_1.default(results, ['$response']),
+                Items: results.Items,
+            };
         };
         this.transactWrite = async (input) => {
             logger_1.default.info('Dynamodb transactWrite input', JSON.stringify(input));
@@ -112,19 +129,22 @@ class DynamodbHelper {
             logger_1.default.info(`DynamoDB scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`, results);
             if (results.LastEvaluatedKey) {
                 const lastResult = await this.scan({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
-                if (results.Items && lastResult.Items) {
+                if (results.Items && lastResult?.Items) {
                     results.Items = results.Items.concat(lastResult.Items);
                 }
-                if (results.Count && lastResult.Count) {
+                if (results.Count && lastResult?.Count) {
                     results.Count = results.Count + lastResult.Count;
                 }
-                if (results.ScannedCount && lastResult.ScannedCount) {
+                if (results.ScannedCount && lastResult?.ScannedCount) {
                     results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
                 }
             }
             // 検索結果出力
             logger_1.default.debug('DynamoDB scan results', results);
-            return results;
+            return {
+                ...omit_1.default(results, ['$response']),
+                Items: results.Items,
+            };
         };
         /** Update */
         this.updateRequest = (input) => {
@@ -144,7 +164,10 @@ class DynamodbHelper {
         this.delete = async (input) => {
             const result = await this.deleteRequest(input).promise();
             logger_1.default.info('DynamoDB delete success.');
-            return result;
+            return {
+                ...omit_1.default(result, ['$response']),
+                Attributes: result.Attributes,
+            };
         };
         /** テーブル情報を取得する */
         this.tableSchema = async (tableName) => {
@@ -245,9 +268,9 @@ class DynamodbHelper {
                 TableName: tableName,
             });
             // データが存在しない
-            if (!values.Items)
+            if (!values?.Items)
                 return;
-            return await this.truncate(tableName, values.Items);
+            return await this.truncate(tableName, values?.Items);
         };
         /**
          * 一括削除（一部削除）

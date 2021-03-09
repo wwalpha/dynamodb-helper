@@ -8,10 +8,11 @@
   "license": "MIT",
   "scripts": {
     "prebuild": "rimraf lib",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "test": "ts-node test/index.ts"
   },
   "devDependencies": {
+    "@types/lodash": "^4.14.168",
     "@types/node": "^14.14.31",
     "rimraf": "^3.0.0",
     "ts-node": "^9.1.1",
@@ -20,6 +21,7 @@
   "dependencies": {
     "aws-sdk": "^2.855.0",
     "aws-xray-sdk-core": "^3.2.0",
+    "lodash": "^4.17.21",
     "log4js": "^6.3.0"
   }
 }

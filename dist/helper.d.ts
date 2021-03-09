@@ -1,6 +1,55 @@
-import { AWSError, Request, DynamoDB } from 'aws-sdk';
+import { DynamoDB } from 'aws-sdk';
 import { Configurations, Configs } from './configs';
-import { PromiseResult } from 'aws-sdk/lib/request';
+export interface AttributeMap extends DynamoDB.DocumentClient.AttributeMap {
+}
+export interface ScanInput extends DynamoDB.DocumentClient.ScanInput {
+}
+export interface ScanOutput<T = any> extends DynamoDB.DocumentClient.ScanOutput {
+    /**
+     * An array of item attributes that match the scan criteria. Each element in this array consists of an attribute name and the value for that attribute.
+     */
+    Items?: T[];
+}
+export interface GetItemInput extends DynamoDB.DocumentClient.GetItemInput {
+}
+export interface GetItemOutput<T = any> extends DynamoDB.DocumentClient.GetItemOutput {
+    /**
+     * A map of attribute names to AttributeValue objects, as specified by ProjectionExpression.
+     */
+    Item?: T;
+}
+export interface PutItemInput extends DynamoDB.DocumentClient.PutItemInput {
+}
+export interface PutItemOutput<T = any> extends DynamoDB.DocumentClient.PutItemOutput {
+    /**
+     * The attribute values as they appeared before the PutItem operation, but only if ReturnValues is specified as ALL_OLD in the request. Each element consists of an attribute name and an attribute value.
+     */
+    Attributes?: T;
+}
+export interface QueryInput extends DynamoDB.DocumentClient.QueryInput {
+}
+export interface QueryOutput<T = any> extends DynamoDB.DocumentClient.QueryOutput {
+    /**
+     * An array of item attributes that match the query criteria. Each element in this array consists of an attribute name and the value for that attribute.
+     */
+    Items?: T[];
+}
+export interface UpdateItemInput extends DynamoDB.DocumentClient.UpdateItemInput {
+}
+export interface UpdateItemOutput<T = any> extends DynamoDB.DocumentClient.UpdateItemOutput {
+    /**
+     * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
+     */
+    Attributes?: T;
+}
+export interface DeleteItemInput extends DynamoDB.DocumentClient.DeleteItemInput {
+}
+export interface DeleteItemOutput<T = any> extends DynamoDB.DocumentClient.DeleteItemOutput {
+    /**
+     * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
+     */
+    Attributes?: T;
+}
 export declare class DynamodbHelper {
     /** client instance */
     configs: Configs;
@@ -10,28 +59,29 @@ export declare class DynamodbHelper {
     /** dynamodb client */
     getClient: () => DynamoDB;
     /** Get */
-    getRequest: (input: DynamoDB.DocumentClient.GetItemInput) => Request<DynamoDB.DocumentClient.GetItemOutput, AWSError>;
+    getRequest: (input: GetItemInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.GetItemOutput, import("aws-sdk").AWSError>;
     /**
      *
      */
-    get: (input: DynamoDB.DocumentClient.GetItemInput) => Promise<DynamoDB.DocumentClient.GetItemOutput | undefined>;
+    get: <T = any>(input: GetItemInput) => Promise<GetItemOutput<T> | undefined>;
     /** Put */
-    putRequest: (input: DynamoDB.DocumentClient.PutItemInput) => Request<DynamoDB.DocumentClient.PutItemOutput, AWSError>;
-    put: (input: DynamoDB.DocumentClient.PutItemInput) => Promise<PromiseResult<DynamoDB.DocumentClient.PutItemOutput, AWSError>>;
+    putRequest: (input: PutItemInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.PutItemOutput, import("aws-sdk").AWSError>;
+    /** put item */
+    put: <T = any>(input: PutItemInput) => Promise<PutItemOutput<T>>;
     /** Query */
-    queryRequest: (input: DynamoDB.DocumentClient.QueryInput) => Request<DynamoDB.DocumentClient.QueryOutput, AWSError>;
+    queryRequest: (input: QueryInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.QueryOutput, import("aws-sdk").AWSError>;
     /** Query */
-    query: (input: DynamoDB.DocumentClient.QueryInput) => Promise<PromiseResult<DynamoDB.DocumentClient.QueryOutput, AWSError>>;
+    query: <T = any>(input: QueryInput) => Promise<QueryOutput<T> | undefined>;
     transactWrite: (input: DynamoDB.DocumentClient.TransactWriteItemsInput) => Promise<DynamoDB.DocumentClient.TransactWriteItemsOutput>;
     /** Scan */
-    scanRequest: (input: DynamoDB.DocumentClient.ScanInput) => Request<DynamoDB.DocumentClient.ScanOutput, AWSError>;
-    scan: (input: DynamoDB.DocumentClient.ScanInput) => Promise<PromiseResult<DynamoDB.DocumentClient.ScanOutput, AWSError>>;
+    scanRequest: (input: ScanInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.ScanOutput, import("aws-sdk").AWSError>;
+    scan: <T = any>(input: ScanInput) => Promise<ScanOutput<T> | undefined>;
     /** Update */
-    updateRequest: (input: DynamoDB.DocumentClient.UpdateItemInput) => Request<DynamoDB.DocumentClient.UpdateItemOutput, AWSError>;
-    update: (input: DynamoDB.DocumentClient.UpdateItemInput) => Promise<PromiseResult<DynamoDB.DocumentClient.UpdateItemOutput, AWSError>>;
+    updateRequest: (input: UpdateItemInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.UpdateItemOutput, import("aws-sdk").AWSError>;
+    update: (input: UpdateItemInput) => Promise<import("aws-sdk/lib/request").PromiseResult<DynamoDB.DocumentClient.UpdateItemOutput, import("aws-sdk").AWSError>>;
     /** Delete */
-    deleteRequest: (input: DynamoDB.DocumentClient.DeleteItemInput) => Request<DynamoDB.DocumentClient.DeleteItemOutput, AWSError>;
-    delete: (input: DynamoDB.DocumentClient.DeleteItemInput) => Promise<PromiseResult<DynamoDB.DocumentClient.DeleteItemOutput, AWSError>>;
+    deleteRequest: (input: DeleteItemInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.DeleteItemOutput, import("aws-sdk").AWSError>;
+    delete: <T = any>(input: DeleteItemInput) => Promise<DeleteItemOutput<T>>;
     /** テーブル情報を取得する */
     private tableSchema;
     /** バッチ削除リクエストを作成 */

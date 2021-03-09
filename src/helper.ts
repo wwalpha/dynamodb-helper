@@ -1,8 +1,64 @@
-import { AWSError, Request, DynamoDB } from 'aws-sdk';
+import { DynamoDB } from 'aws-sdk';
+import omit from 'lodash/omit';
 import { client, documentClient } from './client';
 import Logger from './logger';
 import { Configurations, Configs } from './configs';
-import { PromiseResult } from 'aws-sdk/lib/request';
+
+export interface AttributeMap extends DynamoDB.DocumentClient.AttributeMap {}
+
+export interface ScanInput extends DynamoDB.DocumentClient.ScanInput {}
+
+export interface ScanOutput<T = any> extends DynamoDB.DocumentClient.ScanOutput {
+  /**
+   * An array of item attributes that match the scan criteria. Each element in this array consists of an attribute name and the value for that attribute.
+   */
+  Items?: T[];
+}
+
+export interface GetItemInput extends DynamoDB.DocumentClient.GetItemInput {}
+
+export interface GetItemOutput<T = any> extends DynamoDB.DocumentClient.GetItemOutput {
+  /**
+   * A map of attribute names to AttributeValue objects, as specified by ProjectionExpression.
+   */
+  Item?: T;
+}
+
+export interface PutItemInput extends DynamoDB.DocumentClient.PutItemInput {}
+
+export interface PutItemOutput<T = any> extends DynamoDB.DocumentClient.PutItemOutput {
+  /**
+   * The attribute values as they appeared before the PutItem operation, but only if ReturnValues is specified as ALL_OLD in the request. Each element consists of an attribute name and an attribute value.
+   */
+  Attributes?: T;
+}
+
+export interface QueryInput extends DynamoDB.DocumentClient.QueryInput {}
+
+export interface QueryOutput<T = any> extends DynamoDB.DocumentClient.QueryOutput {
+  /**
+   * An array of item attributes that match the query criteria. Each element in this array consists of an attribute name and the value for that attribute.
+   */
+  Items?: T[];
+}
+
+export interface UpdateItemInput extends DynamoDB.DocumentClient.UpdateItemInput {}
+
+export interface UpdateItemOutput<T = any> extends DynamoDB.DocumentClient.UpdateItemOutput {
+  /**
+   * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
+   */
+  Attributes?: T;
+}
+
+export interface DeleteItemInput extends DynamoDB.DocumentClient.DeleteItemInput {}
+
+export interface DeleteItemOutput<T = any> extends DynamoDB.DocumentClient.DeleteItemOutput {
+  /**
+   * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
+   */
+  Attributes?: T;
+}
 
 export class DynamodbHelper {
   /** client instance */
@@ -25,9 +81,7 @@ export class DynamodbHelper {
   };
 
   /** Get */
-  getRequest = (
-    input: DynamoDB.DocumentClient.GetItemInput
-  ): Request<DynamoDB.DocumentClient.GetItemOutput, AWSError> => {
+  getRequest = (input: GetItemInput) => {
     Logger.info('DynamoDB get item input', input);
 
     return this.getDocumentClient().get(input);
@@ -36,9 +90,7 @@ export class DynamodbHelper {
   /**
    *
    */
-  get = async (
-    input: DynamoDB.DocumentClient.GetItemInput
-  ): Promise<DynamoDB.DocumentClient.GetItemOutput | undefined> => {
+  get = async <T = any>(input: GetItemInput): Promise<GetItemOutput<T> | undefined> => {
     try {
       const result = await this.getRequest(input).promise();
 
@@ -54,7 +106,10 @@ export class DynamodbHelper {
       Logger.info('DynamoDB get item success.');
       Logger.debug('DynamoDB item: ', ret);
 
-      return ret;
+      return {
+        ...omit(result, ['$response']),
+        Item: result.Item as T,
+      };
     } catch (err) {
       Logger.error('DynamoDB get item error.', err.message, err);
       throw err;
@@ -62,65 +117,76 @@ export class DynamodbHelper {
   };
 
   /** Put */
-  putRequest = (input: DynamoDB.DocumentClient.PutItemInput) => {
+  putRequest = (input: PutItemInput) => {
     Logger.info('DynamoDB put item input', input);
 
     return this.getDocumentClient().put(input);
   };
 
-  put = async (
-    input: DynamoDB.DocumentClient.PutItemInput
-  ): Promise<PromiseResult<DynamoDB.DocumentClient.PutItemOutput, AWSError>> => {
+  /** put item */
+  put = async <T = any>(input: PutItemInput): Promise<PutItemOutput<T>> => {
     const result = await this.putRequest(input).promise();
 
     Logger.info('DynamoDB put item success.');
 
-    return result;
+    return {
+      ...omit(result, ['$response']),
+      Attributes: result.Attributes as T,
+    };
   };
 
   /** Query */
-  queryRequest = (input: DynamoDB.DocumentClient.QueryInput) => {
+  queryRequest = (input: QueryInput) => {
     Logger.info('DynamoDB query input', input);
 
     return this.getDocumentClient().query(input);
   };
 
   /** Query */
-  query = async (input: DynamoDB.DocumentClient.QueryInput) => {
+  query = async <T = any>(input: QueryInput): Promise<QueryOutput<T> | undefined> => {
     // クエリ実行
-    const result = await this.queryRequest(input).promise();
+    const results = await this.queryRequest(input).promise();
 
     // 上限ある場合、そのまま終了
-    if (input.Limit && input.Limit === result.Count) {
-      Logger.info('DynamoDB query success.', `Count=${result.Count}`);
-      Logger.debug('DynamoDB query items.', result, result.Items);
+    if (input.Limit && input.Limit === results.Count) {
+      Logger.info('DynamoDB query success.', `Count=${results.Count}`);
+      Logger.debug('DynamoDB query items.', results, results.Items);
 
-      return result;
+      return {
+        ...omit(results, ['$response']),
+        Items: results.Items as T[],
+      };
     }
 
-    if (result.LastEvaluatedKey) {
-      const lastResult = await this.query({ ...input, ExclusiveStartKey: result.LastEvaluatedKey });
+    if (results.LastEvaluatedKey) {
+      const lastResult = await this.query<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
 
-      if (result.Items && lastResult.Items) {
-        result.Items = result.Items.concat(lastResult.Items);
+      if (results.Items && lastResult?.Items) {
+        results.Items = results.Items.concat(lastResult.Items);
       }
-      if (result.Count && lastResult.Count) {
-        result.Count = result.Count + lastResult.Count;
+      if (results.Count && lastResult?.Count) {
+        results.Count = results.Count + lastResult.Count;
       }
-      if (result.ScannedCount && lastResult.ScannedCount) {
-        result.ScannedCount = result.ScannedCount + lastResult.ScannedCount;
+      if (results.ScannedCount && lastResult?.ScannedCount) {
+        results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
       }
     }
 
-    Logger.info('DynamoDB query success.', `Count=${result.Count}`);
-    Logger.debug('DynamoDB query items.', result, result.Items);
+    Logger.info('DynamoDB query success.', `Count=${results.Count}`);
+    Logger.debug('DynamoDB query items.', results, results.Items);
 
     // 上限ある場合、そのまま終了
-    if (input.Limit && input.Limit === result.Count) {
-      return result;
+    if (input.Limit && input.Limit === results.Count) {
+      return {
+        ...omit(results, ['$response']),
+        Items: results.Items as T[],
+      };
     }
 
-    return result;
+    return {
+      ...omit(results, ['$response']),
+      Items: results.Items as T[],
+    };
   };
 
   transactWrite = async (
@@ -139,28 +205,28 @@ export class DynamodbHelper {
   };
 
   /** Scan */
-  scanRequest = (input: DynamoDB.DocumentClient.ScanInput) => {
+  scanRequest = (input: ScanInput) => {
     Logger.info('DynamoDB scan input', input);
 
     return this.getDocumentClient().scan(input);
   };
 
-  scan = async (input: DynamoDB.DocumentClient.ScanInput) => {
+  scan = async <T = any>(input: ScanInput): Promise<ScanOutput<T> | undefined> => {
     // クエリ実行
     const results = await this.scanRequest(input).promise();
 
     Logger.info(`DynamoDB scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`, results);
 
     if (results.LastEvaluatedKey) {
-      const lastResult = await this.scan({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
+      const lastResult = await this.scan<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
 
-      if (results.Items && lastResult.Items) {
+      if (results.Items && lastResult?.Items) {
         results.Items = results.Items.concat(lastResult.Items);
       }
-      if (results.Count && lastResult.Count) {
+      if (results.Count && lastResult?.Count) {
         results.Count = results.Count + lastResult.Count;
       }
-      if (results.ScannedCount && lastResult.ScannedCount) {
+      if (results.ScannedCount && lastResult?.ScannedCount) {
         results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
       }
     }
@@ -168,17 +234,20 @@ export class DynamodbHelper {
     // 検索結果出力
     Logger.debug('DynamoDB scan results', results);
 
-    return results;
+    return {
+      ...omit(results, ['$response']),
+      Items: results.Items as T[],
+    };
   };
 
   /** Update */
-  updateRequest = (input: DynamoDB.DocumentClient.UpdateItemInput) => {
+  updateRequest = (input: UpdateItemInput) => {
     Logger.info('Dynamodb update item input', input);
 
     return this.getDocumentClient().update(input);
   };
 
-  update = async (input: DynamoDB.DocumentClient.UpdateItemInput) => {
+  update = async (input: UpdateItemInput) => {
     const result = await this.updateRequest(input).promise();
 
     Logger.info('DynamoDB update success.');
@@ -187,18 +256,21 @@ export class DynamodbHelper {
   };
 
   /** Delete */
-  deleteRequest = (input: DynamoDB.DocumentClient.DeleteItemInput) => {
+  deleteRequest = (input: DeleteItemInput) => {
     Logger.info('Dynamodb delete item input', input);
 
     return this.getDocumentClient().delete(input);
   };
 
-  delete = async (input: DynamoDB.DocumentClient.DeleteItemInput) => {
+  delete = async <T = any>(input: DeleteItemInput): Promise<DeleteItemOutput<T>> => {
     const result = await this.deleteRequest(input).promise();
 
     Logger.info('DynamoDB delete success.');
 
-    return result;
+    return {
+      ...omit(result, ['$response']),
+      Attributes: result.Attributes as T,
+    };
   };
 
   /** テーブル情報を取得する */
@@ -329,9 +401,9 @@ export class DynamodbHelper {
     });
 
     // データが存在しない
-    if (!values.Items) return;
+    if (!values?.Items) return;
 
-    return await this.truncate(tableName, values.Items);
+    return await this.truncate(tableName, values?.Items as any);
   };
 
   /**

@@ -143,7 +143,7 @@ export class DynamodbHelper {
   };
 
   /** Query */
-  query = async <T = any>(input: QueryInput): Promise<QueryOutput<T> | undefined> => {
+  query = async <T = any>(input: QueryInput): Promise<QueryOutput<T>> => {
     // クエリ実行
     const results = await this.queryRequest(input).promise();
 
@@ -161,13 +161,13 @@ export class DynamodbHelper {
     if (results.LastEvaluatedKey) {
       const lastResult = await this.query<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
 
-      if (results.Items && lastResult?.Items) {
+      if (results.Items && lastResult.Items) {
         results.Items = results.Items.concat(lastResult.Items);
       }
-      if (results.Count && lastResult?.Count) {
+      if (results.Count && lastResult.Count) {
         results.Count = results.Count + lastResult.Count;
       }
-      if (results.ScannedCount && lastResult?.ScannedCount) {
+      if (results.ScannedCount && lastResult.ScannedCount) {
         results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
       }
     }
@@ -211,7 +211,7 @@ export class DynamodbHelper {
     return this.getDocumentClient().scan(input);
   };
 
-  scan = async <T = any>(input: ScanInput): Promise<ScanOutput<T> | undefined> => {
+  scan = async <T = any>(input: ScanInput): Promise<ScanOutput<T>> => {
     // クエリ実行
     const results = await this.scanRequest(input).promise();
 
@@ -220,13 +220,13 @@ export class DynamodbHelper {
     if (results.LastEvaluatedKey) {
       const lastResult = await this.scan<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
 
-      if (results.Items && lastResult?.Items) {
+      if (results.Items && lastResult.Items) {
         results.Items = results.Items.concat(lastResult.Items);
       }
-      if (results.Count && lastResult?.Count) {
+      if (results.Count && lastResult.Count) {
         results.Count = results.Count + lastResult.Count;
       }
-      if (results.ScannedCount && lastResult?.ScannedCount) {
+      if (results.ScannedCount && lastResult.ScannedCount) {
         results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
       }
     }

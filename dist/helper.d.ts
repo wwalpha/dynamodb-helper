@@ -71,11 +71,11 @@ export declare class DynamodbHelper {
     /** Query */
     queryRequest: (input: QueryInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.QueryOutput, import("aws-sdk").AWSError>;
     /** Query */
-    query: <T = any>(input: QueryInput) => Promise<QueryOutput<T> | undefined>;
+    query: <T = any>(input: QueryInput) => Promise<QueryOutput<T>>;
     transactWrite: (input: DynamoDB.DocumentClient.TransactWriteItemsInput) => Promise<DynamoDB.DocumentClient.TransactWriteItemsOutput>;
     /** Scan */
     scanRequest: (input: ScanInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.ScanOutput, import("aws-sdk").AWSError>;
-    scan: <T = any>(input: ScanInput) => Promise<ScanOutput<T> | undefined>;
+    scan: <T = any>(input: ScanInput) => Promise<ScanOutput<T>>;
     /** Update */
     updateRequest: (input: UpdateItemInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.UpdateItemOutput, import("aws-sdk").AWSError>;
     update: (input: UpdateItemInput) => Promise<import("aws-sdk/lib/request").PromiseResult<DynamoDB.DocumentClient.UpdateItemOutput, import("aws-sdk").AWSError>>;

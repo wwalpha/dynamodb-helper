@@ -85,13 +85,13 @@ class DynamodbHelper {
             }
             if (results.LastEvaluatedKey) {
                 const lastResult = await this.query({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
-                if (results.Items && lastResult?.Items) {
+                if (results.Items && lastResult.Items) {
                     results.Items = results.Items.concat(lastResult.Items);
                 }
-                if (results.Count && lastResult?.Count) {
+                if (results.Count && lastResult.Count) {
                     results.Count = results.Count + lastResult.Count;
                 }
-                if (results.ScannedCount && lastResult?.ScannedCount) {
+                if (results.ScannedCount && lastResult.ScannedCount) {
                     results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
                 }
             }
@@ -129,13 +129,13 @@ class DynamodbHelper {
             logger_1.default.info(`DynamoDB scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`, results);
             if (results.LastEvaluatedKey) {
                 const lastResult = await this.scan({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
-                if (results.Items && lastResult?.Items) {
+                if (results.Items && lastResult.Items) {
                     results.Items = results.Items.concat(lastResult.Items);
                 }
-                if (results.Count && lastResult?.Count) {
+                if (results.Count && lastResult.Count) {
                     results.Count = results.Count + lastResult.Count;
                 }
-                if (results.ScannedCount && lastResult?.ScannedCount) {
+                if (results.ScannedCount && lastResult.ScannedCount) {
                     results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
                 }
             }

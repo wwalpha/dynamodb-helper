@@ -69,9 +69,9 @@ export declare class DynamodbHelper {
      */
     get: <T = any>(input: GetItemInput) => Promise<GetItemOutput<T> | undefined>;
     /** Put */
-    putRequest: <U = any>(input: PutItemInput<U>) => import("aws-sdk").Request<DynamoDB.DocumentClient.PutItemOutput, import("aws-sdk").AWSError>;
+    putRequest: <T = any>(input: PutItemInput<T>) => import("aws-sdk").Request<DynamoDB.DocumentClient.PutItemOutput, import("aws-sdk").AWSError>;
     /** Put item */
-    put: <T = any, U = any>(input: PutItemInput<U>) => Promise<PutItemOutput<T>>;
+    put: <T = any>(input: PutItemInput<T>) => Promise<PutItemOutput<T>>;
     /** Query */
     queryRequest: (input: QueryInput) => import("aws-sdk").Request<DynamoDB.DocumentClient.QueryOutput, import("aws-sdk").AWSError>;
     /** Query */

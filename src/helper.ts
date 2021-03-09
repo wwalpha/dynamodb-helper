@@ -122,14 +122,14 @@ export class DynamodbHelper {
   };
 
   /** Put */
-  putRequest = <U = any>(input: PutItemInput<U>) => {
+  putRequest = <T = any>(input: PutItemInput<T>) => {
     Logger.info('DynamoDB put item input', input);
 
     return this.getDocumentClient().put(input);
   };
 
   /** Put item */
-  put = async <T = any, U = any>(input: PutItemInput<U>): Promise<PutItemOutput<T>> => {
+  put = async <T = any>(input: PutItemInput<T>): Promise<PutItemOutput<T>> => {
     const result = await this.putRequest(input).promise();
 
     Logger.info('DynamoDB put item success.');

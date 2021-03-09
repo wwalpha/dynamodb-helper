@@ -56,7 +56,7 @@ class DynamodbHelper {
             logger_1.default.info('DynamoDB put item input', input);
             return this.getDocumentClient().put(input);
         };
-        /** put item */
+        /** Put item */
         this.put = async (input) => {
             const result = await this.putRequest(input).promise();
             logger_1.default.info('DynamoDB put item success.');

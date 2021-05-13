@@ -3,9 +3,9 @@
 ## Installation
 
 ```
-yarn add https://github.com/wwalpha/dynamodb-helper.git
+yarn add @alphax/dynamodb
 or
-npm i https://github.com/wwalpha/dynamodb-helper.git
+npm i @alphax/dynamodb
 ```
 
 ## Feature
@@ -19,9 +19,9 @@ npm i https://github.com/wwalpha/dynamodb-helper.git
 ## Usage
 
 ```js
-import { Helper } from 'dynamodb-helper';
+import { DynamodbHelper } from '@alphax/dynamodb';
 
-const helper = new Helper({
+const helper = new DynamodbHelper({
   logger: {
     appenders: { console: { type: 'console' } },
     categories: { default: { appenders: ['console'], level: 'info' } },

@@ -12,7 +12,6 @@ const helper = new DynamodbHelper({
 const TABLE_NAME = 'DYNAMODB_HELPER_TEST';
 
 const start = async () => {
-  await dropTable();
   await createTable();
 
   await putItem('user001', 'group001');

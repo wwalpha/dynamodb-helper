@@ -72,6 +72,7 @@ class DynamodbHelper {
         };
         /** Query */
         this.query = async (input) => {
+            var _a, _b;
             // クエリ実行
             const results = await this.queryRequest(input).promise();
             // 上限ある場合、そのまま終了
@@ -80,7 +81,7 @@ class DynamodbHelper {
                 logger_1.default.debug('DynamoDB query items.', results, results.Items);
                 return {
                     ...omit_1.default(results, ['$response']),
-                    Items: results.Items,
+                    Items: ((_a = results.Items) !== null && _a !== void 0 ? _a : (results.Items = [])),
                 };
             }
             if (results.LastEvaluatedKey) {
@@ -101,7 +102,7 @@ class DynamodbHelper {
             if (input.Limit && input.Limit === results.Count) {
                 return {
                     ...omit_1.default(results, ['$response']),
-                    Items: results.Items,
+                    Items: ((_b = results.Items) !== null && _b !== void 0 ? _b : (results.Items = [])),
                 };
             }
             return {
@@ -124,6 +125,7 @@ class DynamodbHelper {
             return this.getDocumentClient().scan(input);
         };
         this.scan = async (input) => {
+            var _a;
             // クエリ実行
             const results = await this.scanRequest(input).promise();
             logger_1.default.info(`DynamoDB scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`, results);
@@ -143,7 +145,7 @@ class DynamodbHelper {
             logger_1.default.debug('DynamoDB scan results', results);
             return {
                 ...omit_1.default(results, ['$response']),
-                Items: results.Items,
+                Items: ((_a = results.Items) !== null && _a !== void 0 ? _a : (results.Items = [])),
             };
         };
         /** Update */

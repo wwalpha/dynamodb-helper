@@ -12,7 +12,7 @@ export interface ScanOutput<T = any> extends DynamoDB.DocumentClient.ScanOutput 
   /**
    * An array of item attributes that match the scan criteria. Each element in this array consists of an attribute name and the value for that attribute.
    */
-  Items?: T[];
+  Items: T[];
 }
 
 export interface GetItemInput extends DynamoDB.DocumentClient.GetItemInput {}
@@ -44,7 +44,7 @@ export interface QueryOutput<T = any> extends DynamoDB.DocumentClient.QueryOutpu
   /**
    * An array of item attributes that match the query criteria. Each element in this array consists of an attribute name and the value for that attribute.
    */
-  Items?: T[];
+  Items: T[];
 }
 
 export interface UpdateItemInput extends DynamoDB.DocumentClient.UpdateItemInput {}
@@ -159,7 +159,7 @@ export class DynamodbHelper {
 
       return {
         ...omit(results, ['$response']),
-        Items: results.Items as T[],
+        Items: (results.Items ??= []) as T[],
       };
     }
 
@@ -184,7 +184,7 @@ export class DynamodbHelper {
     if (input.Limit && input.Limit === results.Count) {
       return {
         ...omit(results, ['$response']),
-        Items: results.Items as T[],
+        Items: (results.Items ??= []) as T[],
       };
     }
 
@@ -241,7 +241,7 @@ export class DynamodbHelper {
 
     return {
       ...omit(results, ['$response']),
-      Items: results.Items as T[],
+      Items: (results.Items ??= []) as T[],
     };
   };
 

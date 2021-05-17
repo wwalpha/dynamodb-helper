@@ -1,5 +1,5 @@
-import { Configuration } from 'log4js';
-export declare type LoggerConfiguration = Configuration;
+import winston from 'winston';
+export declare type LoggerConfiguration = winston.LoggerOptions;
 export default class Logger {
     constructor();
     static info: (message: any, ...args: any[]) => void;

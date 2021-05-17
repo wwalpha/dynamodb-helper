@@ -1,5 +1,5 @@
+import winston from 'winston';
 import { CredentialsOptions } from 'aws-sdk/lib/credentials';
-import log4js from 'log4js';
 import { DocumentClientOptions } from './client';
 import { LoggerConfiguration } from './logger';
 
@@ -21,7 +21,7 @@ export class Configs {
    */
   update = (configs: Configurations) => {
     if (configs.logger) {
-      log4js.configure(configs.logger);
+      winston.configure(configs.logger);
     }
 
     if (configs.credentials) {

@@ -1,8 +1,12 @@
-import log4js, { Configuration } from 'log4js';
+import winston from 'winston';
 
-const logger = log4js.getLogger();
+const logger = winston.createLogger({
+  level: 'debug',
+  format: winston.format.json(),
+  transports: [new winston.transports.Console()],
+});
 
-export type LoggerConfiguration = Configuration;
+export type LoggerConfiguration = winston.LoggerOptions;
 
 export default class Logger {
   constructor() {}

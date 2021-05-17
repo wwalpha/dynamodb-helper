@@ -1,6 +1,6 @@
 {
   "name": "@alphax/dynamodb",
-  "version": "1.0.4",
+  "version": "1.0.7",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "repository": {
@@ -35,5 +35,8 @@
   "homepage": "https://github.com/wwalpha/dynamodb-helper#readme",
   "directories": {
     "test": "test"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
   }
 }

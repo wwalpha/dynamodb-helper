@@ -1,6 +1,6 @@
 {
   "name": "@alphax/dynamodb",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "repository": {
@@ -13,8 +13,7 @@
     "prebuild": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
     "pretest": "docker-compose -f test/docker-compose.yml up -d --build",
-    "test": "ts-node test/index.ts",
-    "public": "npm publish --access public"
+    "test": "ts-node test/index.ts"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.168",

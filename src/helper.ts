@@ -87,7 +87,7 @@ export class DynamodbHelper {
 
   /** Get */
   getRequest = (input: GetItemInput) => {
-    Logger.info('DynamoDB get item input', input);
+    Logger.info('dynamodb get item input', input);
 
     return this.getDocumentClient().get(input);
   };
@@ -108,22 +108,22 @@ export class DynamodbHelper {
         Item: result.Item,
       };
 
-      Logger.info('DynamoDB get item success.');
-      Logger.debug('DynamoDB item: ', ret);
+      Logger.info('dynamodb get item success.');
+      Logger.debug('dynamodb item: ', ret);
 
       return {
         ...omit(result, ['$response']),
         Item: result.Item as T,
       };
     } catch (err) {
-      Logger.error('DynamoDB get item error.', err.message, err);
+      Logger.error('dynamodb get item error.', err.message, err);
       throw err;
     }
   };
 
   /** Put */
   putRequest = <T = any>(input: PutItemInput<T>) => {
-    Logger.info('DynamoDB put item input', input);
+    Logger.info('dynamodb put item input', input);
 
     return this.getDocumentClient().put(input);
   };
@@ -132,7 +132,7 @@ export class DynamodbHelper {
   put = async <T = any>(input: PutItemInput<T>): Promise<PutItemOutput<T>> => {
     const result = await this.putRequest(input).promise();
 
-    Logger.info('DynamoDB put item success.');
+    Logger.info('dynamodb put item success.');
 
     return {
       ...omit(result, ['$response']),
@@ -142,7 +142,7 @@ export class DynamodbHelper {
 
   /** Query */
   queryRequest = (input: QueryInput) => {
-    Logger.info('DynamoDB query input', input);
+    Logger.info('dynamodb query input', input);
 
     return this.getDocumentClient().query(input);
   };
@@ -154,8 +154,8 @@ export class DynamodbHelper {
 
     // 上限ある場合、そのまま終了
     if (input.Limit && input.Limit === results.Count) {
-      Logger.info('DynamoDB query success.', `Count=${results.Count}`);
-      Logger.debug('DynamoDB query items.', results, results.Items);
+      Logger.info('dynamodb query success.', `Count=${results.Count}`);
+      Logger.debug('dynamodb query items.', results, results.Items);
 
       return {
         ...omit(results, ['$response']),
@@ -177,8 +177,8 @@ export class DynamodbHelper {
       }
     }
 
-    Logger.info('DynamoDB query success.', `Count=${results.Count}`);
-    Logger.debug('DynamoDB query items.', results, results.Items);
+    Logger.info('dynamodb query success.', `Count=${results.Count}`);
+    Logger.debug('dynamodb query items.', results, results.Items);
 
     // 上限ある場合、そのまま終了
     if (input.Limit && input.Limit === results.Count) {
@@ -197,11 +197,11 @@ export class DynamodbHelper {
   transactWrite = async (
     input: DynamoDB.DocumentClient.TransactWriteItemsInput
   ): Promise<DynamoDB.DocumentClient.TransactWriteItemsOutput> => {
-    Logger.info('Dynamodb transactWrite input', JSON.stringify(input));
+    Logger.info('dynamodb transactWrite input', JSON.stringify(input));
 
     const result = await this.getDocumentClient().transactWrite(input).promise();
 
-    Logger.info('Dynamodb transactWrite success');
+    Logger.info('dynamodb transactWrite success');
 
     return {
       ConsumedCapacity: result.ConsumedCapacity,
@@ -211,7 +211,7 @@ export class DynamodbHelper {
 
   /** Scan */
   scanRequest = (input: ScanInput) => {
-    Logger.info('DynamoDB scan input', input);
+    Logger.info('dynamodb scan input', input);
 
     return this.getDocumentClient().scan(input);
   };
@@ -220,7 +220,8 @@ export class DynamodbHelper {
     // クエリ実行
     const results = await this.scanRequest(input).promise();
 
-    Logger.info(`DynamoDB scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`, results);
+    Logger.info(`dynamodb scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`);
+    Logger.debug('dynamodb scan results', results);
 
     if (results.LastEvaluatedKey) {
       const lastResult = await this.scan<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
@@ -237,7 +238,7 @@ export class DynamodbHelper {
     }
 
     // 検索結果出力
-    Logger.debug('DynamoDB scan results', results);
+    Logger.debug('dynamodb scan results', results);
 
     return {
       ...omit(results, ['$response']),
@@ -247,7 +248,7 @@ export class DynamodbHelper {
 
   /** Update */
   updateRequest = (input: UpdateItemInput) => {
-    Logger.info('Dynamodb update item input', input);
+    Logger.info('dynamodb update item input', input);
 
     return this.getDocumentClient().update(input);
   };
@@ -255,22 +256,30 @@ export class DynamodbHelper {
   update = async (input: UpdateItemInput) => {
     const result = await this.updateRequest(input).promise();
 
-    Logger.info('DynamoDB update success.');
+    Logger.info('dynamodb update success...', {
+      TABLE_NAME: input.TableName,
+    });
 
     return result;
   };
 
   /** Delete */
   deleteRequest = (input: DeleteItemInput) => {
-    Logger.info('Dynamodb delete item input', input);
+    Logger.info('dynamodb delete item input', input);
 
     return this.getDocumentClient().delete(input);
   };
 
   delete = async <T = any>(input: DeleteItemInput): Promise<DeleteItemOutput<T>> => {
+    Logger.info('dynamodb delete start...', {
+      TABLE_NAME: input.TableName,
+    });
+
     const result = await this.deleteRequest(input).promise();
 
-    Logger.info('DynamoDB delete success.');
+    Logger.info('dynamodb delete success...', {
+      TABLE_NAME: input.TableName,
+    });
 
     return {
       ...omit(result, ['$response']),
@@ -288,7 +297,7 @@ export class DynamodbHelper {
 
     // 存在チェック
     if (!table.Table || !table.Table.KeySchema) {
-      throw new Error('Table is not exists.');
+      throw new Error(`Table is not exists. ${tableName}`);
     }
 
     return table.Table.KeySchema;
@@ -415,28 +424,40 @@ export class DynamodbHelper {
    * 一括削除（一部削除）
    */
   truncate = async (tableName: string, records: DynamoDB.DocumentClient.AttributeMap[]) => {
-    Logger.info(`DynamoDB truncate start... ${tableName}`);
+    Logger.info('dynamodb truncate start...', {
+      TABLE_NAME: tableName,
+    });
 
     // リクエスト作成
     const requests = await this.batchDeleteRequest(tableName, records);
     // キューでリクエスト実行
     await this.process(tableName, requests);
 
-    Logger.info(`DynamoDB truncate finished... ${tableName}`);
+    Logger.info('dynamodb truncate finished...', {
+      TABLE_NAME: tableName,
+    });
   };
 
   /**
    * 一括登録
    */
   bulk = async (tableName: string, records: DynamoDB.DocumentClient.AttributeMap[]) => {
-    Logger.info(`DynamoDB bulk insert start... ${tableName}`);
-    Logger.debug(`DynamoDB bulk insert records`, records);
+    Logger.info('dynamodb bulk insert start...', {
+      TABLE_NAME: tableName,
+    });
+
+    Logger.debug(`dynamodb bulk insert records`, {
+      TABLE_NAME: tableName,
+      Records: records,
+    });
 
     // リクエスト作成
     const requests = this.batchPutRequest(records);
     // キューでリクエスト実行
     await this.process(tableName, requests);
 
-    Logger.info(`DynamoDB bulk insert finished... ${tableName}`);
+    Logger.info('dynamodb bulk insert finished...', {
+      TABLE_NAME: tableName,
+    });
   };
 }

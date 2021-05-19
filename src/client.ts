@@ -1,17 +1,7 @@
 import { DynamoDB } from 'aws-sdk';
-import AWSXRay from 'aws-xray-sdk-core';
 
-AWSXRay.enableAutomaticMode();
-AWSXRay.setContextMissingStrategy('LOG_ERROR');
-
-type XRayOptions = {
-  xray?: boolean;
-};
-
-export type DocumentClientOptions = DynamoDB.DocumentClient.DocumentClientOptions &
-  DynamoDB.Types.ClientConfiguration &
-  XRayOptions;
-export type ClientOptions = DynamoDB.ClientConfiguration & XRayOptions;
+export type DocumentClientOptions = DynamoDB.DocumentClient.DocumentClientOptions & DynamoDB.Types.ClientConfiguration;
+export type ClientOptions = DynamoDB.ClientConfiguration;
 
 /**
  * table data item client
@@ -29,17 +19,6 @@ export const documentClient = (
   // endpoint
   if (!options.endpoint && process.env.AWS_ENDPOINT_URL) {
     options.endpoint = process.env.AWS_ENDPOINT_URL;
-  }
-
-  if (options.xray === true) {
-    const client = new DynamoDB.DocumentClient({
-      service: new DynamoDB(options),
-      ...options,
-    });
-
-    AWSXRay.captureAWSClient((client as any).service);
-
-    return client;
   }
 
   return new DynamoDB.DocumentClient(options);
@@ -66,10 +45,6 @@ export const client = (
   }
 
   const client = new DynamoDB(options);
-
-  if (options.xray === true) {
-    return AWSXRay.captureAWSClient(client);
-  }
 
   return client;
 };

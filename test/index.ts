@@ -1,9 +1,7 @@
 import { DynamodbHelper } from '../src';
-import AWSXRay from 'aws-xray-sdk-core';
 
 const helper = new DynamodbHelper({
   options: {
-    xray: false,
     region: 'ap-northeast-1',
     endpoint: 'http://localhost:4566',
   },

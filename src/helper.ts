@@ -116,7 +116,7 @@ export class DynamodbHelper {
         Item: result.Item as T,
       };
     } catch (err) {
-      Logger.error('dynamodb get item error.', err.message, err);
+      Logger.error('dynamodb get item error.', (err as any).message, input, err);
       throw err;
     }
   };

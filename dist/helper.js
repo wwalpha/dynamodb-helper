@@ -14,11 +14,11 @@ class DynamodbHelper {
         this.configs = new configs_1.Configs();
         /** dynamodb document client */
         this.getDocumentClient = () => {
-            return client_1.documentClient(this.configs.getOptions());
+            return (0, client_1.documentClient)(this.configs.getOptions());
         };
         /** dynamodb client */
         this.getClient = () => {
-            return client_1.client(this.configs.getOptions());
+            return (0, client_1.client)(this.configs.getOptions());
         };
         /** Get */
         this.getRequest = (input) => {
@@ -42,12 +42,12 @@ class DynamodbHelper {
                 logger_1.default.info('dynamodb get item success.');
                 logger_1.default.debug('dynamodb item: ', ret);
                 return {
-                    ...omit_1.default(result, ['$response']),
+                    ...(0, omit_1.default)(result, ['$response']),
                     Item: result.Item,
                 };
             }
             catch (err) {
-                logger_1.default.error('dynamodb get item error.', err.message, err);
+                logger_1.default.error('dynamodb get item error.', err.message, input, err);
                 throw err;
             }
         };
@@ -61,7 +61,7 @@ class DynamodbHelper {
             const result = await this.putRequest(input).promise();
             logger_1.default.info('dynamodb put item success.');
             return {
-                ...omit_1.default(result, ['$response']),
+                ...(0, omit_1.default)(result, ['$response']),
                 Attributes: result.Attributes,
             };
         };
@@ -80,7 +80,7 @@ class DynamodbHelper {
                 logger_1.default.info('dynamodb query success.', `Count=${results.Count}`);
                 logger_1.default.debug('dynamodb query items.', results, results.Items);
                 return {
-                    ...omit_1.default(results, ['$response']),
+                    ...(0, omit_1.default)(results, ['$response']),
                     Items: ((_a = results.Items) !== null && _a !== void 0 ? _a : (results.Items = [])),
                 };
             }
@@ -101,12 +101,12 @@ class DynamodbHelper {
             // 上限ある場合、そのまま終了
             if (input.Limit && input.Limit === results.Count) {
                 return {
-                    ...omit_1.default(results, ['$response']),
+                    ...(0, omit_1.default)(results, ['$response']),
                     Items: ((_b = results.Items) !== null && _b !== void 0 ? _b : (results.Items = [])),
                 };
             }
             return {
-                ...omit_1.default(results, ['$response']),
+                ...(0, omit_1.default)(results, ['$response']),
                 Items: results.Items,
             };
         };
@@ -145,7 +145,7 @@ class DynamodbHelper {
             // 検索結果出力
             logger_1.default.debug('dynamodb scan results', results);
             return {
-                ...omit_1.default(results, ['$response']),
+                ...(0, omit_1.default)(results, ['$response']),
                 Items: ((_a = results.Items) !== null && _a !== void 0 ? _a : (results.Items = [])),
             };
         };
@@ -175,7 +175,7 @@ class DynamodbHelper {
                 TABLE_NAME: input.TableName,
             });
             return {
-                ...omit_1.default(result, ['$response']),
+                ...(0, omit_1.default)(result, ['$response']),
                 Attributes: result.Attributes,
             };
         };

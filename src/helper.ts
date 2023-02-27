@@ -1,4 +1,5 @@
-import { AttributeValue, DynamoDBClient, WriteRequest } from '@aws-sdk/client-dynamodb';
+import { WriteRequest } from '@aws-sdk/client-dynamodb';
+import { NativeAttributeValue } from '@aws-sdk/util-dynamodb';
 import {
   GetCommand,
   GetCommandInput,
@@ -27,7 +28,6 @@ import omit from 'lodash/omit';
 import { client, documentClient } from './client';
 import Logger from './logger';
 import { Configurations, Configs } from './configs';
-import { result } from 'lodash';
 
 export interface ScanInput extends ScanCommandInput {}
 
@@ -70,18 +70,18 @@ export interface QueryOutput<T = any> extends Omit<QueryCommandOutput, 'Items' |
   Items: T[];
 }
 
-export interface UpdateItemInput extends UpdateCommandInput {}
+export interface UpdateInput extends UpdateCommandInput {}
 
-export interface UpdateItemOutput<T = any> extends Omit<UpdateCommandOutput, 'Attributes'> {
+export interface UpdateOutput<T = any> extends Omit<UpdateCommandOutput, 'Attributes'> {
   /**
    * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
    */
   Attributes?: T;
 }
 
-export interface DeleteItemInput extends DeleteCommandInput {}
+export interface DeleteInput extends DeleteCommandInput {}
 
-export interface DeleteItemOutput<T = any> extends Omit<DeleteCommandOutput, 'Attributes' | '$metadata'> {
+export interface DeleteOutput<T = any> extends Omit<DeleteCommandOutput, 'Attributes' | '$metadata'> {
   /**
    * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
    */
@@ -282,7 +282,7 @@ export class DynamodbHelper {
   };
 
   /** Update */
-  updateRequest = (input: UpdateItemInput): Promise<UpdateCommandOutput> => {
+  updateRequest = (input: UpdateInput): Promise<UpdateCommandOutput> => {
     Logger.info('dynamodb update item input', input);
 
     const command = new UpdateCommand(input);
@@ -290,7 +290,7 @@ export class DynamodbHelper {
     return this.getDocumentClient().send(command);
   };
 
-  update = async (input: UpdateItemInput) => {
+  update = async (input: UpdateInput) => {
     const result = await this.updateRequest(input);
 
     Logger.info('dynamodb update success...', {
@@ -301,7 +301,7 @@ export class DynamodbHelper {
   };
 
   /** Delete */
-  deleteRequest = (input: DeleteItemInput): Promise<DeleteCommandOutput> => {
+  deleteRequest = (input: DeleteInput): Promise<DeleteCommandOutput> => {
     Logger.info('dynamodb delete item input', input);
 
     const command = new DeleteCommand(input);
@@ -309,7 +309,7 @@ export class DynamodbHelper {
     return this.getDocumentClient().send(command);
   };
 
-  delete = async <T = any>(input: DeleteItemInput): Promise<DeleteItemOutput<T>> => {
+  delete = async <T = any>(input: DeleteInput): Promise<DeleteOutput<T>> => {
     Logger.info('dynamodb delete start...', {
       TABLE_NAME: input.TableName,
     });
@@ -343,7 +343,7 @@ export class DynamodbHelper {
   /** バッチ削除リクエストを作成 */
   private batchDeleteRequest = async (
     tableName: string,
-    records: Record<string, AttributeValue>[]
+    records: Record<string, NativeAttributeValue>[]
   ): Promise<WriteRequest[][]> => {
     // テーブル情報を取得する
     const keySchema = await this.tableSchema(tableName);
@@ -382,7 +382,7 @@ export class DynamodbHelper {
   };
 
   /** バッチ登録リクエストを作成 */
-  private batchPutRequest = (records: Record<string, AttributeValue>[]) => {
+  private batchPutRequest = (records: Record<string, NativeAttributeValue>[]) => {
     const requests: WriteRequest[][] = [];
     const writeRequests: WriteRequest[] = [];
 
@@ -461,7 +461,7 @@ export class DynamodbHelper {
   /**
    * 一括削除（一部削除）
    */
-  truncate = async (tableName: string, records: Record<string, AttributeValue>[]) => {
+  truncate = async (tableName: string, records: Record<string, NativeAttributeValue>[]) => {
     Logger.info('dynamodb truncate start...', {
       TABLE_NAME: tableName,
     });
@@ -479,7 +479,7 @@ export class DynamodbHelper {
   /**
    * 一括登録
    */
-  bulk = async (tableName: string, records: Record<string, AttributeValue>[]) => {
+  bulk = async (tableName: string, records: Record<string, NativeAttributeValue>[]) => {
     Logger.info('dynamodb bulk insert start...', {
       TABLE_NAME: tableName,
     });

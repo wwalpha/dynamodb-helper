@@ -28,7 +28,7 @@ const helper = new DynamodbHelper({
   },
   options: {
     endpoint: 'http://localhost:8001',
-    region: 'ap=northeast-1',
+    region: 'ap-northeast-1',
   },
 });
 

@@ -109,8 +109,8 @@ export class DynamodbHelper {
   };
 
   /** Get */
-  getRequest = (input: GetItemInput): Promise<GetCommandOutput> => {
-    Logger.info('dynamodb get item input', input);
+  private getRequest = (input: GetItemInput): Promise<GetCommandOutput> => {
+    Logger.debug('dynamodb get item start...', input);
 
     const command = new GetCommand(input);
 
@@ -127,7 +127,7 @@ export class DynamodbHelper {
       // データが存在しない
       if (!result.Item) return;
 
-      Logger.info('dynamodb get item success.', input);
+      Logger.debug('dynamodb get item success.', input);
       Logger.debug('Dynamodb ConsumedCapacity: ', result.ConsumedCapacity);
       Logger.debug('Dynamodb item: ', JSON.stringify(result.Item));
 
@@ -142,8 +142,8 @@ export class DynamodbHelper {
   };
 
   /** Put */
-  putRequest = <T extends Record<string, any>>(input: PutItemInput<T>): Promise<PutItemOutput> => {
-    Logger.info('dynamodb put item input', input);
+  private putRequest = <T extends Record<string, any>>(input: PutItemInput<T>): Promise<PutItemOutput> => {
+    Logger.debug('dynamodb put item start...', input);
 
     const command = new PutCommand({
       ...input,
@@ -155,18 +155,23 @@ export class DynamodbHelper {
 
   /** Put item */
   put = async <T extends Record<string, any>>(input: PutItemInput<T>): Promise<PutItemOutput<T>> => {
-    const result = await this.putRequest({ ...input, Item: input.Item });
+    try {
+      const result = await this.putRequest({ ...input, Item: input.Item });
 
-    Logger.info('dynamodb put item success.', input);
+      Logger.debug('dynamodb put item success.', input);
 
-    return {
-      Attributes: result.Attributes as T,
-    };
+      return {
+        Attributes: result.Attributes as T,
+      };
+    } catch (err) {
+      Logger.error('dynamodb put item error.', (err as any).message, input, err);
+      throw err;
+    }
   };
 
   /** Query */
-  queryRequest = async <T = any>(input: QueryInput): Promise<QueryOutput> => {
-    Logger.info('dynamodb query input', input);
+  private queryRequest = async <T = any>(input: QueryInput): Promise<QueryOutput> => {
+    Logger.debug('dynamodb query start...', input);
 
     const command = new QueryCommand(input);
 
@@ -180,66 +185,76 @@ export class DynamodbHelper {
 
   /** Query */
   query = async <T = any>(input: QueryInput): Promise<QueryOutput<T>> => {
-    // クエリ実行
-    const results = await this.queryRequest(input);
+    try {
+      // クエリ実行
+      const results = await this.queryRequest(input);
 
-    // 上限ある場合、そのまま終了
-    if (input.Limit && input.Limit === results.Count) {
-      Logger.info('dynamodb query success.', `Count=${results.Count}`);
+      // 上限ある場合、そのまま終了
+      if (input.Limit && input.Limit === results.Count) {
+        Logger.info('dynamodb query success.', `Count=${results.Count}`, input);
+        Logger.debug('dynamodb query items.', results, results.Items);
+
+        return {
+          ...omit(results, ['$metadata']),
+          Items: (results.Items ??= []) as T[],
+        };
+      }
+
+      if (results.LastEvaluatedKey) {
+        const lastResult = await this.query<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
+
+        if (results.Items && lastResult.Items) {
+          results.Items = results.Items.concat(lastResult.Items);
+        }
+        if (results.Count && lastResult.Count) {
+          results.Count = results.Count + lastResult.Count;
+        }
+        if (results.ScannedCount && lastResult.ScannedCount) {
+          results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
+        }
+      }
+
+      Logger.info('dynamodb query success.', `Count=${results.Count}`, input);
       Logger.debug('dynamodb query items.', results, results.Items);
 
+      // 上限ある場合、そのまま終了
+      if (input.Limit && input.Limit === results.Count) {
+        return {
+          ...omit(results, ['$metadata']),
+          Items: (results.Items ??= []) as T[],
+        };
+      }
+
       return {
         ...omit(results, ['$metadata']),
-        Items: (results.Items ??= []) as T[],
+        Items: results.Items as T[],
       };
+    } catch (err) {
+      Logger.error('dynamodb query error.', (err as any).message, input, err);
+      throw err;
     }
-
-    if (results.LastEvaluatedKey) {
-      const lastResult = await this.query<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
-
-      if (results.Items && lastResult.Items) {
-        results.Items = results.Items.concat(lastResult.Items);
-      }
-      if (results.Count && lastResult.Count) {
-        results.Count = results.Count + lastResult.Count;
-      }
-      if (results.ScannedCount && lastResult.ScannedCount) {
-        results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
-      }
-    }
-
-    Logger.info('dynamodb query success.', `Count=${results.Count}`);
-    Logger.debug('dynamodb query items.', results, results.Items);
-
-    // 上限ある場合、そのまま終了
-    if (input.Limit && input.Limit === results.Count) {
-      return {
-        ...omit(results, ['$metadata']),
-        Items: (results.Items ??= []) as T[],
-      };
-    }
-
-    return {
-      ...omit(results, ['$metadata']),
-      Items: results.Items as T[],
-    };
   };
 
   transactWrite = async (input: TransactWriteCommandInput): Promise<TransactWriteCommandOutput> => {
-    Logger.info('dynamodb transactWrite input', input);
+    try {
+      Logger.debug('dynamodb transactWrite start...', input);
 
-    const command = new TransactWriteCommand(input);
+      const command = new TransactWriteCommand(input);
 
-    const result = await this.getDocumentClient().send(command);
+      const result = await this.getDocumentClient().send(command);
 
-    Logger.info('dynamodb transactWrite success', input);
+      Logger.debug('dynamodb transactWrite success', input);
 
-    return result;
+      return result;
+    } catch (err) {
+      Logger.error('dynamodb transactWrite error.', (err as any).message, input, err);
+      throw err;
+    }
   };
 
   /** Scan */
   scanRequest = async <T = any>(input: ScanInput): Promise<ScanOutput> => {
-    Logger.info('dynamodb scan input', input);
+    Logger.debug('dynamodb scan start...', input);
 
     const command = new ScanCommand(input);
 
@@ -252,38 +267,43 @@ export class DynamodbHelper {
   };
 
   scan = async <T = any>(input: ScanInput): Promise<ScanOutput<T>> => {
-    // クエリ実行
-    const results = await this.scanRequest(input);
+    try {
+      // クエリ実行
+      const results = await this.scanRequest(input);
 
-    Logger.info(`dynamodb scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`, input);
-    Logger.debug('dynamodb scan results', results);
+      Logger.info('dynamodb query success.', `Count=${results.Count}`, input);
+      Logger.debug('dynamodb scan results', results);
 
-    if (results.LastEvaluatedKey) {
-      const lastResult = await this.scan<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
+      if (results.LastEvaluatedKey) {
+        const lastResult = await this.scan<T>({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
 
-      if (results.Items && lastResult.Items) {
-        results.Items = results.Items.concat(lastResult.Items);
+        if (results.Items && lastResult.Items) {
+          results.Items = results.Items.concat(lastResult.Items);
+        }
+        if (results.Count && lastResult.Count) {
+          results.Count = results.Count + lastResult.Count;
+        }
+        if (results.ScannedCount && lastResult.ScannedCount) {
+          results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
+        }
       }
-      if (results.Count && lastResult.Count) {
-        results.Count = results.Count + lastResult.Count;
-      }
-      if (results.ScannedCount && lastResult.ScannedCount) {
-        results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
-      }
+
+      // 検索結果出力
+      Logger.debug('dynamodb scan results', results);
+
+      return {
+        ...omit(results, ['$metadata']),
+        Items: (results.Items ??= []) as T[],
+      };
+    } catch (err) {
+      Logger.error('dynamodb scan error.', (err as any).message, input, err);
+      throw err;
     }
-
-    // 検索結果出力
-    Logger.debug('dynamodb scan results', results);
-
-    return {
-      ...omit(results, ['$metadata']),
-      Items: (results.Items ??= []) as T[],
-    };
   };
 
   /** Update */
-  updateRequest = (input: UpdateInput): Promise<UpdateCommandOutput> => {
-    Logger.info('dynamodb update item input', input);
+  private updateRequest = (input: UpdateInput): Promise<UpdateCommandOutput> => {
+    Logger.debug('dynamodb update start...', input);
 
     const command = new UpdateCommand(input);
 
@@ -291,16 +311,21 @@ export class DynamodbHelper {
   };
 
   update = async (input: UpdateInput) => {
-    const result = await this.updateRequest(input);
+    try {
+      const result = await this.updateRequest(input);
 
-    Logger.info('dynamodb update success...', input);
+      Logger.debug('dynamodb update success...', input);
 
-    return result;
+      return result;
+    } catch (err) {
+      Logger.error('dynamodb update error.', (err as any).message, input, err);
+      throw err;
+    }
   };
 
   /** Delete */
-  deleteRequest = (input: DeleteItemInput): Promise<DeleteCommandOutput> => {
-    Logger.info('dynamodb delete item input', input);
+  private deleteRequest = (input: DeleteItemInput): Promise<DeleteCommandOutput> => {
+    Logger.debug('dynamodb delete item input', input);
 
     const command = new DeleteCommand(input);
 
@@ -308,20 +333,25 @@ export class DynamodbHelper {
   };
 
   delete = async <T = any>(input: DeleteItemInput): Promise<DeleteItemOutput<T>> => {
-    Logger.info('dynamodb delete start...', {
-      TABLE_NAME: input.TableName,
-    });
+    try {
+      Logger.debug('dynamodb delete start...', {
+        TABLE_NAME: input.TableName,
+      });
 
-    const result = await this.deleteRequest(input);
+      const result = await this.deleteRequest(input);
 
-    Logger.info('dynamodb delete success...', {
-      TABLE_NAME: input.TableName,
-    });
+      Logger.debug('dynamodb delete success...', {
+        TABLE_NAME: input.TableName,
+      });
 
-    return {
-      ...omit(result, ['$metadata']),
-      Attributes: result.Attributes as T,
-    };
+      return {
+        ...omit(result, ['$metadata']),
+        Attributes: result.Attributes as T,
+      };
+    } catch (err) {
+      Logger.error('dynamodb delete error.', (err as any).message, input, err);
+      throw err;
+    }
   };
 
   /** テーブル情報を取得する */
@@ -460,40 +490,45 @@ export class DynamodbHelper {
    * 一括削除（一部削除）
    */
   truncate = async (tableName: string, records: Record<string, NativeAttributeValue>[]) => {
-    Logger.info('dynamodb truncate start...', {
-      TABLE_NAME: tableName,
-    });
+    try {
+      Logger.debug('dynamodb truncate start...', {
+        TABLE_NAME: tableName,
+      });
 
-    // リクエスト作成
-    const requests = await this.batchDeleteRequest(tableName, records);
-    // キューでリクエスト実行
-    await this.process(tableName, requests);
+      // リクエスト作成
+      const requests = await this.batchDeleteRequest(tableName, records);
+      // キューでリクエスト実行
+      await this.process(tableName, requests);
 
-    Logger.info('dynamodb truncate finished...', {
-      TABLE_NAME: tableName,
-    });
+      Logger.debug('dynamodb truncate finished...', {
+        TABLE_NAME: tableName,
+      });
+    } catch (err) {
+      Logger.error('dynamodb truncate error.', (err as any).message, tableName, err);
+      throw err;
+    }
   };
 
   /**
    * 一括登録
    */
   bulk = async (tableName: string, records: Record<string, NativeAttributeValue>[]) => {
-    Logger.info('dynamodb bulk insert start...', {
-      TABLE_NAME: tableName,
-    });
+    try {
+      Logger.debug('dynamodb bulk insert start...', {
+        TABLE_NAME: tableName,
+      });
 
-    Logger.debug(`dynamodb bulk insert records`, {
-      TABLE_NAME: tableName,
-      Records: records,
-    });
+      // リクエスト作成
+      const requests = this.batchPutRequest(records);
+      // キューでリクエスト実行
+      await this.process(tableName, requests);
 
-    // リクエスト作成
-    const requests = this.batchPutRequest(records);
-    // キューでリクエスト実行
-    await this.process(tableName, requests);
-
-    Logger.info('dynamodb bulk insert finished...', {
-      TABLE_NAME: tableName,
-    });
+      Logger.debug('dynamodb bulk insert finished...', {
+        TABLE_NAME: tableName,
+      });
+    } catch (err) {
+      Logger.error('dynamodb truncate error.', (err as any).message, tableName, err);
+      throw err;
+    }
   };
 }

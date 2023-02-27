@@ -62,17 +62,17 @@ export declare class DynamodbHelper {
     /** dynamodb client */
     getClient: () => import("@aws-sdk/client-dynamodb").DynamoDB;
     /** Get */
-    getRequest: (input: GetItemInput) => Promise<GetCommandOutput>;
+    private getRequest;
     /**
      *
      */
     get: <T = any>(input: GetItemInput) => Promise<GetItemOutput<T> | undefined>;
     /** Put */
-    putRequest: <T extends Record<string, any>>(input: PutItemInput<T>) => Promise<PutItemOutput>;
+    private putRequest;
     /** Put item */
     put: <T extends Record<string, any>>(input: PutItemInput<T>) => Promise<PutItemOutput<T>>;
     /** Query */
-    queryRequest: <T = any>(input: QueryInput) => Promise<QueryOutput>;
+    private queryRequest;
     /** Query */
     query: <T = any>(input: QueryInput) => Promise<QueryOutput<T>>;
     transactWrite: (input: TransactWriteCommandInput) => Promise<TransactWriteCommandOutput>;
@@ -80,10 +80,10 @@ export declare class DynamodbHelper {
     scanRequest: <T = any>(input: ScanInput) => Promise<ScanOutput>;
     scan: <T = any>(input: ScanInput) => Promise<ScanOutput<T>>;
     /** Update */
-    updateRequest: (input: UpdateInput) => Promise<UpdateCommandOutput>;
+    private updateRequest;
     update: (input: UpdateInput) => Promise<UpdateCommandOutput>;
     /** Delete */
-    deleteRequest: (input: DeleteItemInput) => Promise<DeleteCommandOutput>;
+    private deleteRequest;
     delete: <T = any>(input: DeleteItemInput) => Promise<DeleteItemOutput<T>>;
     /** テーブル情報を取得する */
     private tableSchema;

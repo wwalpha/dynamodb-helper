@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DynamodbHelper = void 0;
+const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const omit_1 = __importDefault(require("lodash/omit"));
 const client_1 = require("./client");
 const logger_1 = __importDefault(require("./logger"));
@@ -12,7 +13,7 @@ class DynamodbHelper {
     constructor(configs) {
         /** client instance */
         this.configs = new configs_1.Configs();
-        /** dynamodb document client */
+        /** dynamodb client */
         this.getDocumentClient = () => {
             return (0, client_1.documentClient)(this.configs.getOptions());
         };
@@ -21,28 +22,25 @@ class DynamodbHelper {
             return (0, client_1.client)(this.configs.getOptions());
         };
         /** Get */
-        this.getRequest = (input) => {
+        this.getRequest = async (input) => {
             logger_1.default.info('dynamodb get item input', input);
-            return this.getDocumentClient().get(input);
+            const command = new lib_dynamodb_1.GetCommand(input);
+            return await this.getDocumentClient().send(command);
         };
         /**
          *
          */
         this.get = async (input) => {
             try {
-                const result = await this.getRequest(input).promise();
+                const result = await this.getRequest(input);
                 // データが存在しない
                 if (!result.Item)
                     return;
-                // 返却値設定
-                const ret = {
-                    ConsumedCapacity: result.ConsumedCapacity,
-                    Item: result.Item,
-                };
                 logger_1.default.info('dynamodb get item success.');
-                logger_1.default.debug('dynamodb item: ', ret);
+                logger_1.default.debug('Dynamodb ConsumedCapacity: ', result.ConsumedCapacity);
+                logger_1.default.debug('Dynamodb item: ', JSON.stringify(result.Item));
                 return {
-                    ...(0, omit_1.default)(result, ['$response']),
+                    ...(0, omit_1.default)(result, ['$metadata']),
                     Item: result.Item,
                 };
             }
@@ -54,33 +52,41 @@ class DynamodbHelper {
         /** Put */
         this.putRequest = (input) => {
             logger_1.default.info('dynamodb put item input', input);
-            return this.getDocumentClient().put(input);
+            const command = new lib_dynamodb_1.PutCommand({
+                ...input,
+                Item: input.Item,
+            });
+            return this.getDocumentClient().send(command);
         };
         /** Put item */
         this.put = async (input) => {
-            const result = await this.putRequest(input).promise();
+            const result = await this.putRequest({ ...input, Item: input.Item });
             logger_1.default.info('dynamodb put item success.');
             return {
-                ...(0, omit_1.default)(result, ['$response']),
                 Attributes: result.Attributes,
             };
         };
         /** Query */
-        this.queryRequest = (input) => {
+        this.queryRequest = async (input) => {
             logger_1.default.info('dynamodb query input', input);
-            return this.getDocumentClient().query(input);
+            const command = new lib_dynamodb_1.QueryCommand(input);
+            const results = await this.getDocumentClient().send(command);
+            return {
+                ...results,
+                Items: results.Items,
+            };
         };
         /** Query */
         this.query = async (input) => {
             var _a, _b;
             // クエリ実行
-            const results = await this.queryRequest(input).promise();
+            const results = await this.queryRequest(input);
             // 上限ある場合、そのまま終了
             if (input.Limit && input.Limit === results.Count) {
                 logger_1.default.info('dynamodb query success.', `Count=${results.Count}`);
                 logger_1.default.debug('dynamodb query items.', results, results.Items);
                 return {
-                    ...(0, omit_1.default)(results, ['$response']),
+                    ...(0, omit_1.default)(results, ['$metadata']),
                     Items: ((_a = results.Items) !== null && _a !== void 0 ? _a : (results.Items = [])),
                 };
             }
@@ -112,22 +118,25 @@ class DynamodbHelper {
         };
         this.transactWrite = async (input) => {
             logger_1.default.info('dynamodb transactWrite input', JSON.stringify(input));
-            const result = await this.getDocumentClient().transactWrite(input).promise();
+            const command = new lib_dynamodb_1.TransactWriteCommand(input);
+            const result = await this.getDocumentClient().send(command);
             logger_1.default.info('dynamodb transactWrite success');
-            return {
-                ConsumedCapacity: result.ConsumedCapacity,
-                ItemCollectionMetrics: result.ItemCollectionMetrics,
-            };
+            return result;
         };
         /** Scan */
-        this.scanRequest = (input) => {
+        this.scanRequest = async (input) => {
             logger_1.default.info('dynamodb scan input', input);
-            return this.getDocumentClient().scan(input);
+            const command = new lib_dynamodb_1.ScanCommand(input);
+            const results = await this.getDocumentClient().send(command);
+            return {
+                ...results,
+                Items: results.Items,
+            };
         };
         this.scan = async (input) => {
             var _a;
             // クエリ実行
-            const results = await this.scanRequest(input).promise();
+            const results = await this.scanRequest(input);
             logger_1.default.info(`dynamodb scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`);
             logger_1.default.debug('dynamodb scan results', results);
             if (results.LastEvaluatedKey) {
@@ -152,10 +161,11 @@ class DynamodbHelper {
         /** Update */
         this.updateRequest = (input) => {
             logger_1.default.info('dynamodb update item input', input);
-            return this.getDocumentClient().update(input);
+            const command = new lib_dynamodb_1.UpdateCommand(input);
+            return this.getDocumentClient().send(command);
         };
         this.update = async (input) => {
-            const result = await this.updateRequest(input).promise();
+            const result = await this.updateRequest(input);
             logger_1.default.info('dynamodb update success...', {
                 TABLE_NAME: input.TableName,
             });
@@ -164,28 +174,27 @@ class DynamodbHelper {
         /** Delete */
         this.deleteRequest = (input) => {
             logger_1.default.info('dynamodb delete item input', input);
-            return this.getDocumentClient().delete(input);
+            const command = new lib_dynamodb_1.DeleteCommand(input);
+            return this.getDocumentClient().send(command);
         };
         this.delete = async (input) => {
             logger_1.default.info('dynamodb delete start...', {
                 TABLE_NAME: input.TableName,
             });
-            const result = await this.deleteRequest(input).promise();
+            const result = await this.deleteRequest(input);
             logger_1.default.info('dynamodb delete success...', {
                 TABLE_NAME: input.TableName,
             });
             return {
-                ...(0, omit_1.default)(result, ['$response']),
+                ...(0, omit_1.default)(result, ['$metadata']),
                 Attributes: result.Attributes,
             };
         };
         /** テーブル情報を取得する */
         this.tableSchema = async (tableName) => {
-            const table = await this.getClient()
-                .describeTable({
+            const table = await this.getClient().describeTable({
                 TableName: tableName,
-            })
-                .promise();
+            });
             // 存在チェック
             if (!table.Table || !table.Table.KeySchema) {
                 throw new Error(`Table is not exists. ${tableName}`);
@@ -251,21 +260,19 @@ class DynamodbHelper {
                 let unprocessed = {
                     [tableName]: item,
                 };
-                // tslint:disable-next-line: space-in-parens
                 for (; Object.keys(unprocessed).length > 0 && unprocessed[tableName].length !== 0;) {
-                    const results = await this.getDocumentClient()
-                        .batchWrite({
+                    const command = new lib_dynamodb_1.BatchWriteCommand({
                         RequestItems: unprocessed,
-                    })
-                        .promise();
-                    // 処理対象がない
-                    if (!results.UnprocessedItems) {
-                        logger_1.default.debug(`Queue${idx + 1}, process complete.`);
-                        break;
+                    });
+                    const results = await this.getClient().send(command);
+                    const items = results.UnprocessedItems;
+                    // 未処理レコードが存在しない
+                    if (items === undefined || items[tableName].length === 0) {
+                        resolve();
+                        return;
                     }
-                    unprocessed = results.UnprocessedItems;
+                    unprocessed = items;
                 }
-                resolve();
             }));
             // delete all
             await Promise.all(tasks);

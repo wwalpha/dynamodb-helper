@@ -1,27 +1,17 @@
-import { DynamoDB } from 'aws-sdk';
-
-export type DocumentClientOptions = DynamoDB.DocumentClient.DocumentClientOptions & DynamoDB.Types.ClientConfiguration;
-export type ClientOptions = DynamoDB.ClientConfiguration;
+import { DynamoDB, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocument } from '@aws-sdk/lib-dynamodb';
 
 /**
  * table data item client
  */
 export const documentClient = (
-  options: DocumentClientOptions = {
+  options: DynamoDBClientConfig = {
     region: process.env.AWS_DEFAULT_REGION as string,
   }
-): DynamoDB.DocumentClient => {
-  // region attribute
-  if (!options.region) {
-    options.region = process.env.AWS_DEFAULT_REGION;
-  }
+): DynamoDBDocument => {
+  const dbClient = client(options);
 
-  // endpoint
-  if (!options.endpoint && process.env.AWS_ENDPOINT_URL) {
-    options.endpoint = process.env.AWS_ENDPOINT_URL;
-  }
-
-  return new DynamoDB.DocumentClient(options);
+  return DynamoDBDocument.from(dbClient);
 };
 
 /**
@@ -30,7 +20,7 @@ export const documentClient = (
  * @param options
  */
 export const client = (
-  options: ClientOptions = {
+  options: DynamoDBClientConfig = {
     region: process.env.AWS_DEFAULT_REGION as string,
   }
 ): DynamoDB => {
@@ -44,7 +34,5 @@ export const client = (
     options.endpoint = process.env.AWS_ENDPOINT_URL;
   }
 
-  const client = new DynamoDB(options);
-
-  return client;
+  return new DynamoDB(options);
 };

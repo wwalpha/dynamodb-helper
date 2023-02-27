@@ -40,45 +40,39 @@ const start = async () => {
 };
 
 const createTable = async () =>
-  await helper
-    .getClient()
-    .createTable({
-      TableName: TABLE_NAME,
-      BillingMode: 'PROVISIONED',
-      KeySchema: [
-        {
-          KeyType: 'HASH',
-          AttributeName: 'userId',
-        },
-        {
-          KeyType: 'RANGE',
-          AttributeName: 'groupId',
-        },
-      ],
-      AttributeDefinitions: [
-        {
-          AttributeName: 'userId',
-          AttributeType: 'S',
-        },
-        {
-          AttributeName: 'groupId',
-          AttributeType: 'S',
-        },
-      ],
-      ProvisionedThroughput: {
-        ReadCapacityUnits: 10,
-        WriteCapacityUnits: 10,
+  await helper.getClient().createTable({
+    TableName: TABLE_NAME,
+    BillingMode: 'PROVISIONED',
+    KeySchema: [
+      {
+        KeyType: 'HASH',
+        AttributeName: 'userId',
       },
-    })
-    .promise();
+      {
+        KeyType: 'RANGE',
+        AttributeName: 'groupId',
+      },
+    ],
+    AttributeDefinitions: [
+      {
+        AttributeName: 'userId',
+        AttributeType: 'S',
+      },
+      {
+        AttributeName: 'groupId',
+        AttributeType: 'S',
+      },
+    ],
+    ProvisionedThroughput: {
+      ReadCapacityUnits: 10,
+      WriteCapacityUnits: 10,
+    },
+  });
 
 const dropTable = async () =>
-  await helper
-    .getClient()
-    .deleteTable({
-      TableName: TABLE_NAME,
-    })
-    .promise();
+  await helper.getClient().deleteTable({
+    TableName: TABLE_NAME,
+  });
 
 const putItem = async (userId: string, groupId: string) =>
   await helper.put({

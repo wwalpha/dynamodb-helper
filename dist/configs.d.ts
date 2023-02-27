@@ -1,10 +1,8 @@
-import { CredentialsOptions } from 'aws-sdk/lib/credentials';
-import { DocumentClientOptions } from './client';
+import { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import { LoggerConfiguration } from './logger';
 export interface Configurations {
-    options?: DocumentClientOptions;
+    options?: DynamoDBClientConfig;
     logger?: LoggerConfiguration;
-    credentials?: CredentialsOptions;
 }
 export declare class Configs {
     constructor();
@@ -14,6 +12,6 @@ export declare class Configs {
      */
     update: (configs: Configurations) => void;
     /** get credentials */
-    getCredentials: () => import("aws-sdk/lib/credentials").Credentials | CredentialsOptions | null | undefined;
-    getOptions: () => DocumentClientOptions;
+    getCredentials: () => import("@aws-sdk/types").AwsCredentialIdentity | import("@aws-sdk/types").Provider<import("@aws-sdk/types").AwsCredentialIdentity> | undefined;
+    getOptions: () => DynamoDBClientConfig;
 }

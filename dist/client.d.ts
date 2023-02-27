@@ -1,13 +1,12 @@
-import { DynamoDB } from 'aws-sdk';
-export declare type DocumentClientOptions = DynamoDB.DocumentClient.DocumentClientOptions & DynamoDB.Types.ClientConfiguration;
-export declare type ClientOptions = DynamoDB.ClientConfiguration;
+import { DynamoDB, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocument } from '@aws-sdk/lib-dynamodb';
 /**
  * table data item client
  */
-export declare const documentClient: (options?: DocumentClientOptions) => DynamoDB.DocumentClient;
+export declare const documentClient: (options?: DynamoDBClientConfig) => DynamoDBDocument;
 /**
  * table client
  *
  * @param options
  */
-export declare const client: (options?: ClientOptions) => DynamoDB;
+export declare const client: (options?: DynamoDBClientConfig) => DynamoDB;

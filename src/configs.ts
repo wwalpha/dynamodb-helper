@@ -1,18 +1,16 @@
+import { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import winston from 'winston';
-import { CredentialsOptions } from 'aws-sdk/lib/credentials';
-import { DocumentClientOptions } from './client';
 import { LoggerConfiguration } from './logger';
 
 export interface Configurations {
-  options?: DocumentClientOptions;
+  options?: DynamoDBClientConfig;
   logger?: LoggerConfiguration;
-  credentials?: CredentialsOptions;
 }
 
 export class Configs {
   constructor() {}
 
-  private options: DocumentClientOptions = {
+  private options: DynamoDBClientConfig = {
     region: process.env.AWS_DEFAULT_REGION,
   };
 
@@ -22,10 +20,6 @@ export class Configs {
   update = (configs: Configurations) => {
     if (configs.logger) {
       winston.configure(configs.logger);
-    }
-
-    if (configs.credentials) {
-      this.options.credentials = configs.credentials;
     }
 
     if (configs.options) {

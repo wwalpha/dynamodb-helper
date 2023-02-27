@@ -17,9 +17,6 @@ class Configs {
             if (configs.logger) {
                 winston_1.default.configure(configs.logger);
             }
-            if (configs.credentials) {
-                this.options.credentials = configs.credentials;
-            }
             if (configs.options) {
                 this.options = { ...this.options, ...configs.options };
             }

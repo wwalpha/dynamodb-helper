@@ -1,64 +1,87 @@
-import { DynamoDB } from 'aws-sdk';
+import { AttributeValue, DynamoDBClient, WriteRequest } from '@aws-sdk/client-dynamodb';
+import {
+  GetCommand,
+  GetCommandInput,
+  GetCommandOutput,
+  PutCommand,
+  PutCommandInput,
+  PutCommandOutput,
+  UpdateCommand,
+  UpdateCommandInput,
+  UpdateCommandOutput,
+  DeleteCommand,
+  DeleteCommandInput,
+  DeleteCommandOutput,
+  ScanCommand,
+  ScanCommandInput,
+  ScanCommandOutput,
+  BatchWriteCommand,
+  QueryCommand,
+  QueryCommandInput,
+  QueryCommandOutput,
+  TransactWriteCommand,
+  TransactWriteCommandInput,
+  TransactWriteCommandOutput,
+} from '@aws-sdk/lib-dynamodb';
 import omit from 'lodash/omit';
 import { client, documentClient } from './client';
 import Logger from './logger';
 import { Configurations, Configs } from './configs';
+import { result } from 'lodash';
 
-export interface AttributeMap extends DynamoDB.DocumentClient.AttributeMap {}
+export interface ScanInput extends ScanCommandInput {}
 
-export interface ScanInput extends DynamoDB.DocumentClient.ScanInput {}
-
-export interface ScanOutput<T = any> extends DynamoDB.DocumentClient.ScanOutput {
+export interface ScanOutput<T = any> extends Omit<ScanCommandOutput, 'Items' | '$metadata'> {
   /**
    * An array of item attributes that match the scan criteria. Each element in this array consists of an attribute name and the value for that attribute.
    */
   Items: T[];
 }
 
-export interface GetItemInput extends DynamoDB.DocumentClient.GetItemInput {}
+export interface GetInput extends GetCommandInput {}
 
-export interface GetItemOutput<T = any> extends DynamoDB.DocumentClient.GetItemOutput {
+export interface GetOutput<T = any> extends Omit<GetCommandOutput, 'Item' | '$metadata'> {
   /**
    * A map of attribute names to AttributeValue objects, as specified by ProjectionExpression.
    */
   Item?: T;
 }
 
-export interface PutItemInput<T = any> extends DynamoDB.DocumentClient.PutItemInput {
+export interface PutInput<T extends Record<string, any>> extends PutCommandInput {
   /**
    * A map of attribute name/value pairs, one for each attribute. Only the primary key attributes are required; you can optionally provide other attribute name-value pairs for the item. You must provide all of the attributes for the primary key. For example, with a simple primary key, you only need to provide a value for the partition key. For a composite primary key, you must provide both values for both the partition key and the sort key. If you specify any attributes that are part of an index key, then the data types for those attributes must match those of the schema in the table's attribute definition. Empty String and Binary attribute values are allowed. Attribute values of type String and Binary must have a length greater than zero if the attribute is used as a key attribute for a table or index. For more information about primary keys, see Primary Key in the Amazon DynamoDB Developer Guide. Each element in the Item map is an AttributeValue object.
    */
   Item: T;
 }
 
-export interface PutItemOutput<T = any> extends DynamoDB.DocumentClient.PutItemOutput {
+export interface PutOutput<T = any> extends Omit<PutCommandOutput, 'Attributes' | '$metadata'> {
   /**
-   * The attribute values as they appeared before the PutItem operation, but only if ReturnValues is specified as ALL_OLD in the request. Each element consists of an attribute name and an attribute value.
+   * The attribute values as they appeared before the Put operation, but only if ReturnValues is specified as ALL_OLD in the request. Each element consists of an attribute name and an attribute value.
    */
   Attributes?: T;
 }
 
-export interface QueryInput extends DynamoDB.DocumentClient.QueryInput {}
+export interface QueryInput extends QueryCommandInput {}
 
-export interface QueryOutput<T = any> extends DynamoDB.DocumentClient.QueryOutput {
+export interface QueryOutput<T = any> extends Omit<QueryCommandOutput, 'Items' | '$metadata'> {
   /**
    * An array of item attributes that match the query criteria. Each element in this array consists of an attribute name and the value for that attribute.
    */
   Items: T[];
 }
 
-export interface UpdateItemInput extends DynamoDB.DocumentClient.UpdateItemInput {}
+export interface UpdateItemInput extends UpdateCommandInput {}
 
-export interface UpdateItemOutput<T = any> extends DynamoDB.DocumentClient.UpdateItemOutput {
+export interface UpdateItemOutput<T = any> extends Omit<UpdateCommandOutput, 'Attributes'> {
   /**
    * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
    */
   Attributes?: T;
 }
 
-export interface DeleteItemInput extends DynamoDB.DocumentClient.DeleteItemInput {}
+export interface DeleteItemInput extends DeleteCommandInput {}
 
-export interface DeleteItemOutput<T = any> extends DynamoDB.DocumentClient.DeleteItemOutput {
+export interface DeleteItemOutput<T = any> extends Omit<DeleteCommandOutput, 'Attributes' | '$metadata'> {
   /**
    * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
    */
@@ -75,8 +98,8 @@ export class DynamodbHelper {
     }
   }
 
-  /** dynamodb document client */
-  getDocumentClient = (): DynamoDB.DocumentClient => {
+  /** dynamodb client */
+  getDocumentClient = () => {
     return documentClient(this.configs.getOptions());
   };
 
@@ -86,33 +109,30 @@ export class DynamodbHelper {
   };
 
   /** Get */
-  getRequest = (input: GetItemInput) => {
+  getRequest = async (input: GetInput): Promise<GetCommandOutput> => {
     Logger.info('dynamodb get item input', input);
 
-    return this.getDocumentClient().get(input);
+    const command = new GetCommand(input);
+
+    return await this.getDocumentClient().send(command);
   };
 
   /**
    *
    */
-  get = async <T = any>(input: GetItemInput): Promise<GetItemOutput<T> | undefined> => {
+  get = async <T = any>(input: GetInput): Promise<GetOutput<T> | undefined> => {
     try {
-      const result = await this.getRequest(input).promise();
+      const result = await this.getRequest(input);
 
       // データが存在しない
       if (!result.Item) return;
 
-      // 返却値設定
-      const ret: DynamoDB.DocumentClient.GetItemOutput = {
-        ConsumedCapacity: result.ConsumedCapacity,
-        Item: result.Item,
-      };
-
       Logger.info('dynamodb get item success.');
-      Logger.debug('dynamodb item: ', ret);
+      Logger.debug('Dynamodb ConsumedCapacity: ', result.ConsumedCapacity);
+      Logger.debug('Dynamodb item: ', JSON.stringify(result.Item));
 
       return {
-        ...omit(result, ['$response']),
+        ...omit(result, ['$metadata']),
         Item: result.Item as T,
       };
     } catch (err) {
@@ -122,35 +142,46 @@ export class DynamodbHelper {
   };
 
   /** Put */
-  putRequest = <T = any>(input: PutItemInput<T>) => {
+  putRequest = <T extends Record<string, any>>(input: PutInput<T>): Promise<PutOutput> => {
     Logger.info('dynamodb put item input', input);
 
-    return this.getDocumentClient().put(input);
+    const command = new PutCommand({
+      ...input,
+      Item: input.Item,
+    });
+
+    return this.getDocumentClient().send(command);
   };
 
   /** Put item */
-  put = async <T = any>(input: PutItemInput<T>): Promise<PutItemOutput<T>> => {
-    const result = await this.putRequest(input).promise();
+  put = async <T extends Record<string, any>>(input: PutInput<T>): Promise<PutOutput<T>> => {
+    const result = await this.putRequest({ ...input, Item: input.Item });
 
     Logger.info('dynamodb put item success.');
 
     return {
-      ...omit(result, ['$response']),
       Attributes: result.Attributes as T,
     };
   };
 
   /** Query */
-  queryRequest = (input: QueryInput) => {
+  queryRequest = async <T = any>(input: QueryInput): Promise<QueryOutput> => {
     Logger.info('dynamodb query input', input);
 
-    return this.getDocumentClient().query(input);
+    const command = new QueryCommand(input);
+
+    const results = await this.getDocumentClient().send(command);
+
+    return {
+      ...results,
+      Items: results.Items as T[],
+    };
   };
 
   /** Query */
   query = async <T = any>(input: QueryInput): Promise<QueryOutput<T>> => {
     // クエリ実行
-    const results = await this.queryRequest(input).promise();
+    const results = await this.queryRequest(input);
 
     // 上限ある場合、そのまま終了
     if (input.Limit && input.Limit === results.Count) {
@@ -158,7 +189,7 @@ export class DynamodbHelper {
       Logger.debug('dynamodb query items.', results, results.Items);
 
       return {
-        ...omit(results, ['$response']),
+        ...omit(results, ['$metadata']),
         Items: (results.Items ??= []) as T[],
       };
     }
@@ -183,42 +214,46 @@ export class DynamodbHelper {
     // 上限ある場合、そのまま終了
     if (input.Limit && input.Limit === results.Count) {
       return {
-        ...omit(results, ['$response']),
+        ...omit(results, ['$metadata']),
         Items: (results.Items ??= []) as T[],
       };
     }
 
     return {
-      ...omit(results, ['$response']),
+      ...omit(results, ['$metadata']),
       Items: results.Items as T[],
     };
   };
 
-  transactWrite = async (
-    input: DynamoDB.DocumentClient.TransactWriteItemsInput
-  ): Promise<DynamoDB.DocumentClient.TransactWriteItemsOutput> => {
+  transactWrite = async (input: TransactWriteCommandInput): Promise<TransactWriteCommandOutput> => {
     Logger.info('dynamodb transactWrite input', JSON.stringify(input));
 
-    const result = await this.getDocumentClient().transactWrite(input).promise();
+    const command = new TransactWriteCommand(input);
+
+    const result = await this.getDocumentClient().send(command);
 
     Logger.info('dynamodb transactWrite success');
 
-    return {
-      ConsumedCapacity: result.ConsumedCapacity,
-      ItemCollectionMetrics: result.ItemCollectionMetrics,
-    };
+    return result;
   };
 
   /** Scan */
-  scanRequest = (input: ScanInput) => {
+  scanRequest = async <T = any>(input: ScanInput): Promise<ScanOutput> => {
     Logger.info('dynamodb scan input', input);
 
-    return this.getDocumentClient().scan(input);
+    const command = new ScanCommand(input);
+
+    const results = await this.getDocumentClient().send(command);
+
+    return {
+      ...results,
+      Items: results.Items as T[],
+    };
   };
 
   scan = async <T = any>(input: ScanInput): Promise<ScanOutput<T>> => {
     // クエリ実行
-    const results = await this.scanRequest(input).promise();
+    const results = await this.scanRequest(input);
 
     Logger.info(`dynamodb scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`);
     Logger.debug('dynamodb scan results', results);
@@ -241,20 +276,22 @@ export class DynamodbHelper {
     Logger.debug('dynamodb scan results', results);
 
     return {
-      ...omit(results, ['$response']),
+      ...omit(results, ['$metadata']),
       Items: (results.Items ??= []) as T[],
     };
   };
 
   /** Update */
-  updateRequest = (input: UpdateItemInput) => {
+  updateRequest = (input: UpdateItemInput): Promise<UpdateCommandOutput> => {
     Logger.info('dynamodb update item input', input);
 
-    return this.getDocumentClient().update(input);
+    const command = new UpdateCommand(input);
+
+    return this.getDocumentClient().send(command);
   };
 
   update = async (input: UpdateItemInput) => {
-    const result = await this.updateRequest(input).promise();
+    const result = await this.updateRequest(input);
 
     Logger.info('dynamodb update success...', {
       TABLE_NAME: input.TableName,
@@ -264,10 +301,12 @@ export class DynamodbHelper {
   };
 
   /** Delete */
-  deleteRequest = (input: DeleteItemInput) => {
+  deleteRequest = (input: DeleteItemInput): Promise<DeleteCommandOutput> => {
     Logger.info('dynamodb delete item input', input);
 
-    return this.getDocumentClient().delete(input);
+    const command = new DeleteCommand(input);
+
+    return this.getDocumentClient().send(command);
   };
 
   delete = async <T = any>(input: DeleteItemInput): Promise<DeleteItemOutput<T>> => {
@@ -275,25 +314,23 @@ export class DynamodbHelper {
       TABLE_NAME: input.TableName,
     });
 
-    const result = await this.deleteRequest(input).promise();
+    const result = await this.deleteRequest(input);
 
     Logger.info('dynamodb delete success...', {
       TABLE_NAME: input.TableName,
     });
 
     return {
-      ...omit(result, ['$response']),
+      ...omit(result, ['$metadata']),
       Attributes: result.Attributes as T,
     };
   };
 
   /** テーブル情報を取得する */
   private tableSchema = async (tableName: string) => {
-    const table = await this.getClient()
-      .describeTable({
-        TableName: tableName,
-      })
-      .promise();
+    const table = await this.getClient().describeTable({
+      TableName: tableName,
+    });
 
     // 存在チェック
     if (!table.Table || !table.Table.KeySchema) {
@@ -304,13 +341,16 @@ export class DynamodbHelper {
   };
 
   /** バッチ削除リクエストを作成 */
-  private batchDeleteRequest = async (tableName: string, records: DynamoDB.DocumentClient.AttributeMap[]) => {
+  private batchDeleteRequest = async (
+    tableName: string,
+    records: Record<string, AttributeValue>[]
+  ): Promise<WriteRequest[][]> => {
     // テーブル情報を取得する
     const keySchema = await this.tableSchema(tableName);
 
     const keys = keySchema.map((item: any) => item.AttributeName);
-    const requests: DynamoDB.DocumentClient.WriteRequests[] = [];
-    const writeRequests: DynamoDB.DocumentClient.WriteRequests = [];
+    const requests: WriteRequest[][] = [];
+    const writeRequests: WriteRequest[] = [];
 
     // リクエストを作成する
     for (let idx = 0; idx < records.length; idx = idx + 1) {
@@ -342,9 +382,9 @@ export class DynamodbHelper {
   };
 
   /** バッチ登録リクエストを作成 */
-  private batchPutRequest = (records: DynamoDB.DocumentClient.AttributeMap[]) => {
-    const requests: DynamoDB.DocumentClient.WriteRequests[] = [];
-    const writeRequests: DynamoDB.DocumentClient.WriteRequests = [];
+  private batchPutRequest = (records: Record<string, AttributeValue>[]) => {
+    const requests: WriteRequest[][] = [];
+    const writeRequests: WriteRequest[] = [];
 
     // リクエストを作成する
     for (let idx = 0; idx < records.length; idx = idx + 1) {
@@ -370,35 +410,33 @@ export class DynamodbHelper {
   };
 
   /** バッチリクエストを実行する */
-  private process = async (tableName: string, requests: DynamoDB.DocumentClient.WriteRequests[]) => {
+  private process = async (tableName: string, requests: WriteRequest[][]) => {
     const tasks = requests.map(
       (item, idx) =>
         new Promise<void>(async (resolve) => {
           Logger.debug(`Queue${idx + 1}, in flight items: ${item.length}`);
 
-          let unprocessed: DynamoDB.DocumentClient.BatchWriteItemRequestMap = {
+          let unprocessed: Record<string, WriteRequest[]> = {
             [tableName]: item,
           };
 
-          // tslint:disable-next-line: space-in-parens
           for (; Object.keys(unprocessed).length > 0 && unprocessed[tableName].length !== 0; ) {
-            const results = await this.getDocumentClient()
-              .batchWrite({
-                RequestItems: unprocessed,
-              })
-              .promise();
+            const command = new BatchWriteCommand({
+              RequestItems: unprocessed,
+            });
 
-            // 処理対象がない
-            if (!results.UnprocessedItems) {
-              Logger.debug(`Queue${idx + 1}, process complete.`);
+            const results = await this.getClient().send(command);
 
-              break;
+            const items = results.UnprocessedItems;
+
+            // 未処理レコードが存在しない
+            if (items === undefined || items[tableName] === undefined || items[tableName].length === 0) {
+              resolve();
+              return;
             }
 
-            unprocessed = results.UnprocessedItems;
+            unprocessed = items;
           }
-
-          resolve();
         })
     );
 
@@ -423,7 +461,7 @@ export class DynamodbHelper {
   /**
    * 一括削除（一部削除）
    */
-  truncate = async (tableName: string, records: DynamoDB.DocumentClient.AttributeMap[]) => {
+  truncate = async (tableName: string, records: Record<string, AttributeValue>[]) => {
     Logger.info('dynamodb truncate start...', {
       TABLE_NAME: tableName,
     });
@@ -441,7 +479,7 @@ export class DynamodbHelper {
   /**
    * 一括登録
    */
-  bulk = async (tableName: string, records: DynamoDB.DocumentClient.AttributeMap[]) => {
+  bulk = async (tableName: string, records: Record<string, AttributeValue>[]) => {
     Logger.info('dynamodb bulk insert start...', {
       TABLE_NAME: tableName,
     });

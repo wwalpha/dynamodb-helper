@@ -11,7 +11,11 @@ export const documentClient = (
 ): DynamoDBDocument => {
   const dbClient = client(options);
 
-  return DynamoDBDocument.from(dbClient);
+  return DynamoDBDocument.from(dbClient, {
+    marshallOptions: {
+      removeUndefinedValues: true,
+    },
+  });
 };
 
 /**

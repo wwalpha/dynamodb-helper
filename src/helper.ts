@@ -109,12 +109,12 @@ export class DynamodbHelper {
   };
 
   /** Get */
-  getRequest = async (input: GetItemInput): Promise<GetCommandOutput> => {
+  getRequest = (input: GetItemInput): Promise<GetCommandOutput> => {
     Logger.info('dynamodb get item input', input);
 
     const command = new GetCommand(input);
 
-    return await this.getDocumentClient().send(command);
+    return this.getDocumentClient().send(command);
   };
 
   /**
@@ -127,7 +127,7 @@ export class DynamodbHelper {
       // データが存在しない
       if (!result.Item) return;
 
-      Logger.info('dynamodb get item success.');
+      Logger.info('dynamodb get item success.', input);
       Logger.debug('Dynamodb ConsumedCapacity: ', result.ConsumedCapacity);
       Logger.debug('Dynamodb item: ', JSON.stringify(result.Item));
 
@@ -157,7 +157,7 @@ export class DynamodbHelper {
   put = async <T extends Record<string, any>>(input: PutItemInput<T>): Promise<PutItemOutput<T>> => {
     const result = await this.putRequest({ ...input, Item: input.Item });
 
-    Logger.info('dynamodb put item success.');
+    Logger.info('dynamodb put item success.', input);
 
     return {
       Attributes: result.Attributes as T,
@@ -226,13 +226,13 @@ export class DynamodbHelper {
   };
 
   transactWrite = async (input: TransactWriteCommandInput): Promise<TransactWriteCommandOutput> => {
-    Logger.info('dynamodb transactWrite input', JSON.stringify(input));
+    Logger.info('dynamodb transactWrite input', input);
 
     const command = new TransactWriteCommand(input);
 
     const result = await this.getDocumentClient().send(command);
 
-    Logger.info('dynamodb transactWrite success');
+    Logger.info('dynamodb transactWrite success', input);
 
     return result;
   };
@@ -255,7 +255,7 @@ export class DynamodbHelper {
     // クエリ実行
     const results = await this.scanRequest(input);
 
-    Logger.info(`dynamodb scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`);
+    Logger.info(`dynamodb scan success. LastEvaluatedKey: ${results.LastEvaluatedKey}`, input);
     Logger.debug('dynamodb scan results', results);
 
     if (results.LastEvaluatedKey) {
@@ -293,9 +293,7 @@ export class DynamodbHelper {
   update = async (input: UpdateInput) => {
     const result = await this.updateRequest(input);
 
-    Logger.info('dynamodb update success...', {
-      TABLE_NAME: input.TableName,
-    });
+    Logger.info('dynamodb update success...', input);
 
     return result;
   };
@@ -425,7 +423,7 @@ export class DynamodbHelper {
               RequestItems: unprocessed,
             });
 
-            const results = await this.getClient().send(command);
+            const results = await this.getDocumentClient().send(command);
 
             const items = results.UnprocessedItems;
 

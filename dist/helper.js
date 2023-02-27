@@ -107,12 +107,12 @@ class DynamodbHelper {
             // 上限ある場合、そのまま終了
             if (input.Limit && input.Limit === results.Count) {
                 return {
-                    ...(0, omit_1.default)(results, ['$response']),
+                    ...(0, omit_1.default)(results, ['$metadata']),
                     Items: ((_b = results.Items) !== null && _b !== void 0 ? _b : (results.Items = [])),
                 };
             }
             return {
-                ...(0, omit_1.default)(results, ['$response']),
+                ...(0, omit_1.default)(results, ['$metadata']),
                 Items: results.Items,
             };
         };
@@ -154,7 +154,7 @@ class DynamodbHelper {
             // 検索結果出力
             logger_1.default.debug('dynamodb scan results', results);
             return {
-                ...(0, omit_1.default)(results, ['$response']),
+                ...(0, omit_1.default)(results, ['$metadata']),
                 Items: ((_a = results.Items) !== null && _a !== void 0 ? _a : (results.Items = [])),
             };
         };
@@ -267,7 +267,7 @@ class DynamodbHelper {
                     const results = await this.getClient().send(command);
                     const items = results.UnprocessedItems;
                     // 未処理レコードが存在しない
-                    if (items === undefined || items[tableName].length === 0) {
+                    if (items === undefined || items[tableName] === undefined || items[tableName].length === 0) {
                         resolve();
                         return;
                     }

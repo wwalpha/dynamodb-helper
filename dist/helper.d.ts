@@ -1,4 +1,4 @@
-import { AttributeValue } from '@aws-sdk/client-dynamodb';
+import { NativeAttributeValue } from '@aws-sdk/util-dynamodb';
 import { GetCommandInput, GetCommandOutput, PutCommandInput, PutCommandOutput, UpdateCommandInput, UpdateCommandOutput, DeleteCommandInput, DeleteCommandOutput, ScanCommandInput, ScanCommandOutput, QueryCommandInput, QueryCommandOutput, TransactWriteCommandInput, TransactWriteCommandOutput } from '@aws-sdk/lib-dynamodb';
 import { Configurations, Configs } from './configs';
 export interface ScanInput extends ScanCommandInput {
@@ -37,17 +37,17 @@ export interface QueryOutput<T = any> extends Omit<QueryCommandOutput, 'Items' |
      */
     Items: T[];
 }
-export interface UpdateItemInput extends UpdateCommandInput {
+export interface UpdateInput extends UpdateCommandInput {
 }
-export interface UpdateItemOutput<T = any> extends Omit<UpdateCommandOutput, 'Attributes'> {
+export interface UpdateOutput<T = any> extends Omit<UpdateCommandOutput, 'Attributes'> {
     /**
      * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
      */
     Attributes?: T;
 }
-export interface DeleteItemInput extends DeleteCommandInput {
+export interface DeleteInput extends DeleteCommandInput {
 }
-export interface DeleteItemOutput<T = any> extends Omit<DeleteCommandOutput, 'Attributes' | '$metadata'> {
+export interface DeleteOutput<T = any> extends Omit<DeleteCommandOutput, 'Attributes' | '$metadata'> {
     /**
      * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
      */
@@ -80,11 +80,11 @@ export declare class DynamodbHelper {
     scanRequest: <T = any>(input: ScanInput) => Promise<ScanOutput>;
     scan: <T = any>(input: ScanInput) => Promise<ScanOutput<T>>;
     /** Update */
-    updateRequest: (input: UpdateItemInput) => Promise<UpdateCommandOutput>;
-    update: (input: UpdateItemInput) => Promise<UpdateCommandOutput>;
+    updateRequest: (input: UpdateInput) => Promise<UpdateCommandOutput>;
+    update: (input: UpdateInput) => Promise<UpdateCommandOutput>;
     /** Delete */
-    deleteRequest: (input: DeleteItemInput) => Promise<DeleteCommandOutput>;
-    delete: <T = any>(input: DeleteItemInput) => Promise<DeleteItemOutput<T>>;
+    deleteRequest: (input: DeleteInput) => Promise<DeleteCommandOutput>;
+    delete: <T = any>(input: DeleteInput) => Promise<DeleteOutput<T>>;
     /** テーブル情報を取得する */
     private tableSchema;
     /** バッチ削除リクエストを作成 */
@@ -100,9 +100,9 @@ export declare class DynamodbHelper {
     /**
      * 一括削除（一部削除）
      */
-    truncate: (tableName: string, records: Record<string, AttributeValue>[]) => Promise<void>;
+    truncate: (tableName: string, records: Record<string, NativeAttributeValue>[]) => Promise<void>;
     /**
      * 一括登録
      */
-    bulk: (tableName: string, records: Record<string, AttributeValue>[]) => Promise<void>;
+    bulk: (tableName: string, records: Record<string, NativeAttributeValue>[]) => Promise<void>;
 }

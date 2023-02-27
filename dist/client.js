@@ -10,7 +10,11 @@ const documentClient = (options = {
     region: process.env.AWS_DEFAULT_REGION,
 }) => {
     const dbClient = (0, exports.client)(options);
-    return lib_dynamodb_1.DynamoDBDocument.from(dbClient);
+    return lib_dynamodb_1.DynamoDBDocument.from(dbClient, {
+        marshallOptions: {
+            removeUndefinedValues: true,
+        },
+    });
 };
 exports.documentClient = documentClient;
 /**

@@ -38,23 +38,23 @@ export interface ScanOutput<T = any> extends Omit<ScanCommandOutput, 'Items' | '
   Items: T[];
 }
 
-export interface GetInput extends GetCommandInput {}
+export interface GetItemInput extends GetCommandInput {}
 
-export interface GetOutput<T = any> extends Omit<GetCommandOutput, 'Item' | '$metadata'> {
+export interface GetItemOutput<T = any> extends Omit<GetCommandOutput, 'Item' | '$metadata'> {
   /**
    * A map of attribute names to AttributeValue objects, as specified by ProjectionExpression.
    */
   Item?: T;
 }
 
-export interface PutInput<T extends Record<string, any>> extends PutCommandInput {
+export interface PutItemInput<T extends Record<string, any>> extends PutCommandInput {
   /**
    * A map of attribute name/value pairs, one for each attribute. Only the primary key attributes are required; you can optionally provide other attribute name-value pairs for the item. You must provide all of the attributes for the primary key. For example, with a simple primary key, you only need to provide a value for the partition key. For a composite primary key, you must provide both values for both the partition key and the sort key. If you specify any attributes that are part of an index key, then the data types for those attributes must match those of the schema in the table's attribute definition. Empty String and Binary attribute values are allowed. Attribute values of type String and Binary must have a length greater than zero if the attribute is used as a key attribute for a table or index. For more information about primary keys, see Primary Key in the Amazon DynamoDB Developer Guide. Each element in the Item map is an AttributeValue object.
    */
   Item: T;
 }
 
-export interface PutOutput<T = any> extends Omit<PutCommandOutput, 'Attributes' | '$metadata'> {
+export interface PutItemOutput<T = any> extends Omit<PutCommandOutput, 'Attributes' | '$metadata'> {
   /**
    * The attribute values as they appeared before the Put operation, but only if ReturnValues is specified as ALL_OLD in the request. Each element consists of an attribute name and an attribute value.
    */
@@ -79,9 +79,9 @@ export interface UpdateOutput<T = any> extends Omit<UpdateCommandOutput, 'Attrib
   Attributes?: T;
 }
 
-export interface DeleteInput extends DeleteCommandInput {}
+export interface DeleteItemInput extends DeleteCommandInput {}
 
-export interface DeleteOutput<T = any> extends Omit<DeleteCommandOutput, 'Attributes' | '$metadata'> {
+export interface DeleteItemOutput<T = any> extends Omit<DeleteCommandOutput, 'Attributes' | '$metadata'> {
   /**
    * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
    */
@@ -109,7 +109,7 @@ export class DynamodbHelper {
   };
 
   /** Get */
-  getRequest = async (input: GetInput): Promise<GetCommandOutput> => {
+  getRequest = async (input: GetItemInput): Promise<GetCommandOutput> => {
     Logger.info('dynamodb get item input', input);
 
     const command = new GetCommand(input);
@@ -120,7 +120,7 @@ export class DynamodbHelper {
   /**
    *
    */
-  get = async <T = any>(input: GetInput): Promise<GetOutput<T> | undefined> => {
+  get = async <T = any>(input: GetItemInput): Promise<GetItemOutput<T> | undefined> => {
     try {
       const result = await this.getRequest(input);
 
@@ -142,7 +142,7 @@ export class DynamodbHelper {
   };
 
   /** Put */
-  putRequest = <T extends Record<string, any>>(input: PutInput<T>): Promise<PutOutput> => {
+  putRequest = <T extends Record<string, any>>(input: PutItemInput<T>): Promise<PutItemOutput> => {
     Logger.info('dynamodb put item input', input);
 
     const command = new PutCommand({
@@ -154,7 +154,7 @@ export class DynamodbHelper {
   };
 
   /** Put item */
-  put = async <T extends Record<string, any>>(input: PutInput<T>): Promise<PutOutput<T>> => {
+  put = async <T extends Record<string, any>>(input: PutItemInput<T>): Promise<PutItemOutput<T>> => {
     const result = await this.putRequest({ ...input, Item: input.Item });
 
     Logger.info('dynamodb put item success.');
@@ -301,7 +301,7 @@ export class DynamodbHelper {
   };
 
   /** Delete */
-  deleteRequest = (input: DeleteInput): Promise<DeleteCommandOutput> => {
+  deleteRequest = (input: DeleteItemInput): Promise<DeleteCommandOutput> => {
     Logger.info('dynamodb delete item input', input);
 
     const command = new DeleteCommand(input);
@@ -309,7 +309,7 @@ export class DynamodbHelper {
     return this.getDocumentClient().send(command);
   };
 
-  delete = async <T = any>(input: DeleteInput): Promise<DeleteOutput<T>> => {
+  delete = async <T = any>(input: DeleteItemInput): Promise<DeleteItemOutput<T>> => {
     Logger.info('dynamodb delete start...', {
       TABLE_NAME: input.TableName,
     });

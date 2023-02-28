@@ -1,43 +1,47 @@
-import winston from 'winston';
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.json(),
-  transports: [new winston.transports.Console()],
-});
+import winston, { LoggerOptions } from 'winston';
 
 export type LoggerConfiguration = winston.LoggerOptions;
 
 export default class Logger {
+  private static logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.json(),
+    transports: [new winston.transports.Console()],
+  });
+
   constructor() {}
 
   static info = (message: any, ...args: any[]) => {
-    if (logger.isInfoEnabled()) {
+    if (this.logger.isInfoEnabled()) {
       if (args.length > 0) {
-        logger.info(message, args);
+        this.logger.info(message, args);
       } else {
-        logger.info(message);
+        this.logger.info(message);
       }
     }
   };
 
   static debug = (message: any, ...args: any[]) => {
-    if (logger.isDebugEnabled()) {
+    if (this.logger.isDebugEnabled()) {
       if (args.length > 0) {
-        logger.debug(message, args);
+        this.logger.debug(message, args);
       } else {
-        logger.debug(message);
+        this.logger.debug(message);
       }
     }
   };
 
   static error = (message: any, ...args: any[]) => {
-    if (logger.isErrorEnabled()) {
+    if (this.logger.isErrorEnabled()) {
       if (args.length > 0) {
-        logger.error(message, args);
+        this.logger.error(message, args);
       } else {
-        logger.error(message);
+        this.logger.error(message);
       }
     }
+  };
+
+  static updateOptions = (options: LoggerOptions) => {
+    this.logger = winston.createLogger(options);
   };
 }

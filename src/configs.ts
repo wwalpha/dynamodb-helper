@@ -1,6 +1,5 @@
 import { DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
-import winston from 'winston';
-import { LoggerConfiguration } from './logger';
+import Logger, { LoggerConfiguration } from './logger';
 
 export interface Configurations {
   options?: DynamoDBClientConfig;
@@ -19,7 +18,7 @@ export class Configs {
    */
   update = (configs: Configurations) => {
     if (configs.logger) {
-      winston.configure(configs.logger);
+      Logger.updateOptions(configs.logger);
     }
 
     if (configs.options) {

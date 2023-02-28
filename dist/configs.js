@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Configs = void 0;
-const winston_1 = __importDefault(require("winston"));
+const logger_1 = __importDefault(require("./logger"));
 class Configs {
     constructor() {
         this.options = {
@@ -15,7 +15,7 @@ class Configs {
          */
         this.update = (configs) => {
             if (configs.logger) {
-                winston_1.default.configure(configs.logger);
+                logger_1.default.updateOptions(configs.logger);
             }
             if (configs.options) {
                 this.options = { ...this.options, ...configs.options };

@@ -271,7 +271,7 @@ export class DynamodbHelper {
       // クエリ実行
       const results = await this.scanRequest(input);
 
-      Logger.info('dynamodb query success.', `Count=${results.Count}`, input);
+      Logger.info('dynamodb scan success.', `Count=${results.Count}`, input);
       Logger.debug('dynamodb scan results', results);
 
       if (results.LastEvaluatedKey) {

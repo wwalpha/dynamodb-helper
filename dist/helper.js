@@ -156,7 +156,7 @@ class DynamodbHelper {
             try {
                 // クエリ実行
                 const results = await this.scanRequest(input);
-                logger_1.default.info('dynamodb query success.', `Count=${results.Count}`, input);
+                logger_1.default.info('dynamodb scan success.', `Count=${results.Count}`, input);
                 logger_1.default.debug('dynamodb scan results', results);
                 if (results.LastEvaluatedKey) {
                     const lastResult = await this.scan({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });

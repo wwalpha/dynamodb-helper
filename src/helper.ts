@@ -411,6 +411,8 @@ export class DynamodbHelper {
 
   /** バッチ登録リクエストを作成 */
   private batchPutRequest = (records: Record<string, NativeAttributeValue>[]) => {
+    if (records.length === 0) return [];
+
     const requests: WriteRequest[][] = [];
     const writeRequests: WriteRequest[] = [];
 

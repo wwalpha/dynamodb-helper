@@ -267,6 +267,8 @@ class DynamodbHelper {
         };
         /** バッチ登録リクエストを作成 */
         this.batchPutRequest = (records) => {
+            if (records.length === 0)
+                return [];
             const requests = [];
             const writeRequests = [];
             // リクエストを作成する

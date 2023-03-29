@@ -15,11 +15,17 @@ class DynamodbHelper {
         this.configs = new configs_1.Configs();
         /** dynamodb client */
         this.getDocumentClient = () => {
-            return (0, client_1.documentClient)(this.configs.getOptions());
+            if (!this.docClient) {
+                this.docClient = (0, client_1.documentClient)(this.configs.getOptions());
+            }
+            return this.docClient;
         };
         /** dynamodb client */
         this.getClient = () => {
-            return (0, client_1.client)(this.configs.getOptions());
+            if (!this.client) {
+                this.client = (0, client_1.client)(this.configs.getOptions());
+            }
+            return this.client;
         };
         /** Get */
         this.getRequest = (input) => {

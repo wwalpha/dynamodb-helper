@@ -1,4 +1,4 @@
-import { WriteRequest } from '@aws-sdk/client-dynamodb';
+import { DynamoDB, WriteRequest } from '@aws-sdk/client-dynamodb';
 import { NativeAttributeValue } from '@aws-sdk/util-dynamodb';
 import {
   GetCommand,
@@ -23,6 +23,7 @@ import {
   TransactWriteCommand,
   TransactWriteCommandInput,
   TransactWriteCommandOutput,
+  DynamoDBDocument,
 } from '@aws-sdk/lib-dynamodb';
 import omit from 'lodash/omit';
 import { client, documentClient } from './client';
@@ -91,6 +92,8 @@ export interface DeleteItemOutput<T = any> extends Omit<DeleteCommandOutput, 'At
 export class DynamodbHelper {
   /** client instance */
   configs: Configs = new Configs();
+  docClient: DynamoDBDocument | undefined;
+  client: DynamoDB | undefined;
 
   constructor(configs?: Configurations) {
     if (configs) {
@@ -100,12 +103,20 @@ export class DynamodbHelper {
 
   /** dynamodb client */
   getDocumentClient = () => {
-    return documentClient(this.configs.getOptions());
+    if (!this.docClient) {
+      this.docClient = documentClient(this.configs.getOptions());
+    }
+
+    return this.docClient;
   };
 
   /** dynamodb client */
   getClient = () => {
-    return client(this.configs.getOptions());
+    if (!this.client) {
+      this.client = client(this.configs.getOptions());
+    }
+
+    return this.client;
   };
 
   /** Get */

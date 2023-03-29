@@ -289,6 +289,8 @@ class DynamodbHelper {
         };
         /** バッチリクエストを実行する */
         this.process = async (tableName, requests) => {
+            if (requests.length === 0)
+                return;
             const tasks = requests.map((item, idx) => new Promise(async (resolve) => {
                 logger_1.default.debug(`Queue${idx + 1}, in flight items: ${item.length}`);
                 let unprocessed = {

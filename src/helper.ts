@@ -439,6 +439,8 @@ export class DynamodbHelper {
 
   /** バッチリクエストを実行する */
   private process = async (tableName: string, requests: WriteRequest[][]) => {
+    if (requests.length === 0) return;
+
     const tasks = requests.map(
       (item, idx) =>
         new Promise<void>(async (resolve) => {

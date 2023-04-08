@@ -268,7 +268,9 @@ class DynamodbHelper {
                 }
             }
             // 最後の件も追加する
-            requests.push([...writeRequests]);
+            if (writeRequests.length > 0) {
+                requests.push([...writeRequests]);
+            }
             return requests;
         };
         /** バッチ登録リクエストを作成 */
@@ -329,7 +331,7 @@ class DynamodbHelper {
                 TableName: tableName,
             });
             // データが存在しない
-            if (!values.Items)
+            if (!values.Items || values.Items.length === 0)
                 return;
             return await this.truncate(tableName, values.Items);
         };

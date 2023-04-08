@@ -415,7 +415,9 @@ export class DynamodbHelper {
     }
 
     // 最後の件も追加する
-    requests.push([...writeRequests]);
+    if (writeRequests.length > 0) {
+      requests.push([...writeRequests]);
+    }
 
     return requests;
   };
@@ -496,7 +498,7 @@ export class DynamodbHelper {
     });
 
     // データが存在しない
-    if (!values.Items) return;
+    if (!values.Items || values.Items.length === 0) return;
 
     return await this.truncate(tableName, values.Items as any);
   };
@@ -512,6 +514,7 @@ export class DynamodbHelper {
 
       // リクエスト作成
       const requests = await this.batchDeleteRequest(tableName, records);
+
       // キューでリクエスト実行
       await this.process(tableName, requests);
 

@@ -447,7 +447,9 @@ export class DynamodbHelper {
     }
 
     // 最後の件も追加する
-    requests.push([...writeRequests]);
+    if (writeRequests.length > 0) {
+      requests.push([...writeRequests]);
+    }
 
     return requests;
   };

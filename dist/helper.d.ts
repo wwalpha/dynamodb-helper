@@ -99,7 +99,7 @@ export declare class DynamodbHelper {
     /**
      * 一括削除（全件削除）
      */
-    truncateAll: (tableName: string) => Promise<void>;
+    truncateAll: (tableName: string, lastEvaluatedKey?: Record<string, NativeAttributeValue>) => Promise<void>;
     /**
      * 一括削除（一部削除）
      */

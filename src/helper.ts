@@ -494,15 +494,20 @@ export class DynamodbHelper {
   /**
    * 一括削除（全件削除）
    */
-  truncateAll = async (tableName: string) => {
-    const values = await this.scan({
+  truncateAll = async (tableName: string, lastEvaluatedKey?: Record<string, NativeAttributeValue>) => {
+    const results = await this.scanRequest({
       TableName: tableName,
+      ExclusiveStartKey: lastEvaluatedKey,
     });
 
     // データが存在しない
-    if (!values.Items || values.Items.length === 0) return;
+    if (!results.Items || results.Items.length === 0) return;
 
-    return await this.truncate(tableName, values.Items as any);
+    await this.truncate(tableName, results.Items as any);
+
+    if (!lastEvaluatedKey) {
+      await this.truncateAll(tableName, lastEvaluatedKey);
+    }
   };
 
   /**

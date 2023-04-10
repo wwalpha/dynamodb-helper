@@ -328,14 +328,18 @@ class DynamodbHelper {
         /**
          * 一括削除（全件削除）
          */
-        this.truncateAll = async (tableName) => {
-            const values = await this.scan({
+        this.truncateAll = async (tableName, lastEvaluatedKey) => {
+            const results = await this.scanRequest({
                 TableName: tableName,
+                ExclusiveStartKey: lastEvaluatedKey,
             });
             // データが存在しない
-            if (!values.Items || values.Items.length === 0)
+            if (!results.Items || results.Items.length === 0)
                 return;
-            return await this.truncate(tableName, values.Items);
+            await this.truncate(tableName, results.Items);
+            if (!lastEvaluatedKey) {
+                await this.truncateAll(tableName, lastEvaluatedKey);
+            }
         };
         /**
          * 一括削除（一部削除）

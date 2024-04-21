@@ -3,6 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.client = exports.documentClient = void 0;
 const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
+const node_http_handler_1 = require("@smithy/node-http-handler");
+const node_http_1 = require("node:http");
 /**
  * table data item client
  */
@@ -24,6 +26,9 @@ exports.documentClient = documentClient;
  */
 const client = (options = {
     region: process.env.AWS_DEFAULT_REGION,
+    requestHandler: new node_http_handler_1.NodeHttpHandler({
+        httpAgent: new node_http_1.Agent({ keepAlive: false }),
+    }),
 }) => {
     // region attribute
     if (!options.region) {

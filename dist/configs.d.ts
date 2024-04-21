@@ -12,6 +12,6 @@ export declare class Configs {
      */
     update: (configs: Configurations) => void;
     /** get credentials */
-    getCredentials: () => import("@aws-sdk/types").AwsCredentialIdentity | import("@aws-sdk/types").Provider<import("@aws-sdk/types").AwsCredentialIdentity> | undefined;
+    getCredentials: () => import("@smithy/types").AwsCredentialIdentity | import("@smithy/types").AwsCredentialIdentityProvider | undefined;
     getOptions: () => DynamoDBClientConfig;
 }

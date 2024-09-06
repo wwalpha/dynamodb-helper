@@ -182,7 +182,7 @@ export class DynamodbHelper {
 
   /** Query */
   private queryRequest = async <T = any>(input: QueryInput): Promise<QueryOutput> => {
-    Logger.debug('dynamodb query start...', input);
+    Logger.debug('dynamodb query start...', JSON.stringify(input));
 
     const command = new QueryCommand(input);
 
@@ -202,8 +202,8 @@ export class DynamodbHelper {
 
       // 上限ある場合、そのまま終了
       if (input.Limit && input.Limit === results.Count) {
-        Logger.info('dynamodb query success.', `Count=${results.Count}`, input);
-        Logger.debug('dynamodb query items.', results, results.Items);
+        Logger.info('dynamodb query success.', `Count=${results.Count}`, JSON.stringify(input));
+        Logger.debug('dynamodb query items.', JSON.stringify(results), JSON.stringify(results.Items));
 
         return {
           ...omit(results, ['$metadata']),

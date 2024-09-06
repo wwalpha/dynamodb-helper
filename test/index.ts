@@ -1,3 +1,4 @@
+import { CreateTableCommand, DeleteTableCommand } from '@aws-sdk/client-dynamodb';
 import { DynamodbHelper } from '../src';
 
 const helper = new DynamodbHelper({
@@ -40,39 +41,38 @@ const start = async () => {
 };
 
 const createTable = async () =>
-  await helper.getClient().createTable({
-    TableName: TABLE_NAME,
-    BillingMode: 'PROVISIONED',
-    KeySchema: [
-      {
-        KeyType: 'HASH',
-        AttributeName: 'userId',
+  await helper.getClient().send(
+    new CreateTableCommand({
+      TableName: TABLE_NAME,
+      BillingMode: 'PROVISIONED',
+      KeySchema: [
+        {
+          KeyType: 'HASH',
+          AttributeName: 'userId',
+        },
+        {
+          KeyType: 'RANGE',
+          AttributeName: 'groupId',
+        },
+      ],
+      AttributeDefinitions: [
+        {
+          AttributeName: 'userId',
+          AttributeType: 'S',
+        },
+        {
+          AttributeName: 'groupId',
+          AttributeType: 'S',
+        },
+      ],
+      ProvisionedThroughput: {
+        ReadCapacityUnits: 10,
+        WriteCapacityUnits: 10,
       },
-      {
-        KeyType: 'RANGE',
-        AttributeName: 'groupId',
-      },
-    ],
-    AttributeDefinitions: [
-      {
-        AttributeName: 'userId',
-        AttributeType: 'S',
-      },
-      {
-        AttributeName: 'groupId',
-        AttributeType: 'S',
-      },
-    ],
-    ProvisionedThroughput: {
-      ReadCapacityUnits: 10,
-      WriteCapacityUnits: 10,
-    },
-  });
+    })
+  );
 
-const dropTable = async () =>
-  await helper.getClient().deleteTable({
-    TableName: TABLE_NAME,
-  });
+const dropTable = async () => await helper.getClient().send(new DeleteTableCommand({ TableName: TABLE_NAME }));
 
 const putItem = async (userId: string, groupId: string) =>
   await helper.put({

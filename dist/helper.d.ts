@@ -1,4 +1,4 @@
-import { DynamoDB } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { NativeAttributeValue } from '@aws-sdk/util-dynamodb';
 import { GetCommandInput, GetCommandOutput, PutCommandInput, PutCommandOutput, UpdateCommandInput, UpdateCommandOutput, DeleteCommandInput, DeleteCommandOutput, ScanCommandInput, ScanCommandOutput, QueryCommandInput, QueryCommandOutput, TransactWriteCommandInput, TransactWriteCommandOutput, DynamoDBDocument } from '@aws-sdk/lib-dynamodb';
 import { Configurations, Configs } from './configs';
@@ -58,12 +58,12 @@ export declare class DynamodbHelper {
     /** client instance */
     configs: Configs;
     docClient: DynamoDBDocument | undefined;
-    client: DynamoDB | undefined;
+    client: DynamoDBClient | undefined;
     constructor(configs?: Configurations);
     /** dynamodb client */
     getDocumentClient: () => DynamoDBDocument;
     /** dynamodb client */
-    getClient: () => DynamoDB;
+    getClient: () => DynamoDBClient;
     /** Get */
     private getRequest;
     /**

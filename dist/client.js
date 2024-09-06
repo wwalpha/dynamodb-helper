@@ -33,6 +33,6 @@ const client = (options = {
     if (!options.endpoint && process.env.AWS_ENDPOINT_URL) {
         options.endpoint = process.env.AWS_ENDPOINT_URL;
     }
-    return new client_dynamodb_1.DynamoDB(options);
+    return new client_dynamodb_1.DynamoDBClient(options);
 };
 exports.client = client;

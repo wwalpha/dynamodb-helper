@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DynamodbHelper = void 0;
+const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const omit_1 = __importDefault(require("lodash/omit"));
 const client_1 = require("./client");
@@ -86,7 +87,7 @@ class DynamodbHelper {
     };
     /** Query */
     queryRequest = async (input) => {
-        logger_1.default.debug('dynamodb query start...', input);
+        logger_1.default.debug('dynamodb query start...', JSON.stringify(input));
         const command = new lib_dynamodb_1.QueryCommand(input);
         const results = await this.getDocumentClient().send(command);
         return {
@@ -101,8 +102,8 @@ class DynamodbHelper {
             const results = await this.queryRequest(input);
             // 上限ある場合、そのまま終了
             if (input.Limit && input.Limit === results.Count) {
-                logger_1.default.info('dynamodb query success.', `Count=${results.Count}`, input);
-                logger_1.default.debug('dynamodb query items.', results, results.Items);
+                logger_1.default.info('dynamodb query success.', `Count=${results.Count}`, JSON.stringify(input));
+                logger_1.default.debug('dynamodb query items.', JSON.stringify(results), JSON.stringify(results.Items));
                 return {
                     ...(0, omit_1.default)(results, ['$metadata']),
                     Items: (results.Items ??= []),
@@ -236,9 +237,7 @@ class DynamodbHelper {
     };
     /** テーブル情報を取得する */
     tableSchema = async (tableName) => {
-        const table = await this.getClient().describeTable({
-            TableName: tableName,
-        });
+        const table = await this.getClient().send(new client_dynamodb_1.DescribeTableCommand({ TableName: tableName }));
         // 存在チェック
         if (!table.Table || !table.Table.KeySchema) {
             throw new Error(`Table is not exists. ${tableName}`);

@@ -1,4 +1,4 @@
-import { DynamoDB, WriteRequest } from '@aws-sdk/client-dynamodb';
+import { DescribeTableCommand, DynamoDBClient, WriteRequest } from '@aws-sdk/client-dynamodb';
 import { NativeAttributeValue } from '@aws-sdk/util-dynamodb';
 import {
   GetCommand,
@@ -93,7 +93,7 @@ export class DynamodbHelper {
   /** client instance */
   configs: Configs = new Configs();
   docClient: DynamoDBDocument | undefined;
-  client: DynamoDB | undefined;
+  client: DynamoDBClient | undefined;
 
   constructor(configs?: Configurations) {
     if (configs) {
@@ -367,9 +367,7 @@ export class DynamodbHelper {
 
   /** テーブル情報を取得する */
   private tableSchema = async (tableName: string) => {
-    const table = await this.getClient().describeTable({
-      TableName: tableName,
-    });
+    const table = await this.getClient().send(new DescribeTableCommand({ TableName: tableName }));
 
     // 存在チェック
     if (!table.Table || !table.Table.KeySchema) {

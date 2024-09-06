@@ -16,21 +16,19 @@
     "test": "ts-node test/index.ts"
   },
   "devDependencies": {
-    "@aws-sdk/types": "^3.535.0",
-    "@types/lodash": "^4.14.182",
-    "@types/node": "^20.12.7",
-    "prettier": "^3.2.5",
-    "ts-node": "^10.9.1",
-    "typescript": "^4.9.5"
+    "@aws-sdk/types": "^3.609.0",
+    "@types/lodash": "^4.17.7",
+    "@types/node": "^22.5.4",
+    "prettier": "^3.3.3",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.556.0",
-    "@aws-sdk/lib-dynamodb": "^3.556.0",
-    "@aws-sdk/util-dynamodb": "^3.556.0",
-    "@smithy/smithy-client": "^2.5.1",
-    "@smithy/node-http-handler": "^2.5.0",
-    "lodash": "^4.17.21",
-    "winston": "^3.7.2"
+    "@aws-sdk/client-dynamodb": "latest",
+    "@aws-sdk/lib-dynamodb": "latest",
+    "@aws-sdk/util-dynamodb": "latest",
+    "lodash": "latest",
+    "winston": "latest"
   },
   "description": "```\r yarn add https://github.com/wwalpha/dynamodb-helper.git\r or\r npm i https://github.com/wwalpha/dynamodb-helper.git\r ```",
   "bugs": {

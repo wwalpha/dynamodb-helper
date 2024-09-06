@@ -1,4 +1,4 @@
-import { DynamoDB, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
+import { DynamoDBClient, DynamoDBClientConfig } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocument } from '@aws-sdk/lib-dynamodb';
 
 /**
@@ -27,7 +27,7 @@ export const client = (
   options: DynamoDBClientConfig = {
     region: process.env.AWS_DEFAULT_REGION as string,
   }
-): DynamoDB => {
+): DynamoDBClient => {
   // region attribute
   if (!options.region) {
     options.region = process.env.AWS_DEFAULT_REGION;
@@ -38,5 +38,5 @@ export const client = (
     options.endpoint = process.env.AWS_ENDPOINT_URL;
   }
 
-  return new DynamoDB(options);
+  return new DynamoDBClient(options);
 };

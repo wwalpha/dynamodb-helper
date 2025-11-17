@@ -5,11 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const winston_1 = __importDefault(require("winston"));
 class Logger {
-    static logger = winston_1.default.createLogger({
+    static defaultOptions = {
         level: 'info',
         format: winston_1.default.format.json(),
         transports: [new winston_1.default.transports.Console()],
-    });
+    };
+    static logger = winston_1.default.createLogger(Logger.defaultOptions);
     constructor() { }
     static info = (message, ...args) => {
         if (this.logger.isInfoEnabled()) {
@@ -42,7 +43,12 @@ class Logger {
         }
     };
     static updateOptions = (options) => {
-        this.logger = winston_1.default.createLogger(options);
+        const mergedOptions = {
+            ...Logger.defaultOptions,
+            ...options,
+            transports: options.transports ?? Logger.defaultOptions.transports,
+        };
+        this.logger = winston_1.default.createLogger(mergedOptions);
     };
 }
 exports.default = Logger;

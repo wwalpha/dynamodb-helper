@@ -30,64 +30,40 @@ import { client, documentClient } from './client';
 import Logger from './logger';
 import { Configurations, Configs } from './configs';
 
+type DynamoRecord = Record<string, NativeAttributeValue>;
+type CommandOutputWithoutMetadata<O> = Omit<O, '$metadata'>;
+type ResultWithItems<O, T> = Omit<CommandOutputWithoutMetadata<O>, 'Items'> & { Items: T[] };
+type ResultWithOptionalItem<O, T> = Omit<CommandOutputWithoutMetadata<O>, 'Item'> & { Item?: T };
+type ResultWithOptionalAttributes<O, T> = Omit<CommandOutputWithoutMetadata<O>, 'Attributes'> & { Attributes?: T };
+
 export interface ScanInput extends ScanCommandInput {}
 
-export interface ScanOutput<T = any> extends Omit<ScanCommandOutput, 'Items' | '$metadata'> {
-  /**
-   * An array of item attributes that match the scan criteria. Each element in this array consists of an attribute name and the value for that attribute.
-   */
-  Items: T[];
-}
+export type ScanOutput<T = DynamoRecord> = ResultWithItems<ScanCommandOutput, T>;
 
 export interface GetItemInput extends GetCommandInput {}
 
-export interface GetItemOutput<T = any> extends Omit<GetCommandOutput, 'Item' | '$metadata'> {
-  /**
-   * A map of attribute names to AttributeValue objects, as specified by ProjectionExpression.
-   */
-  Item?: T;
-}
+export type GetItemOutput<T = DynamoRecord> = ResultWithOptionalItem<GetCommandOutput, T>;
 
-export interface PutItemInput<T extends Record<string, any>> extends PutCommandInput {
+export interface PutItemInput<T extends DynamoRecord> extends PutCommandInput {
   /**
    * A map of attribute name/value pairs, one for each attribute. Only the primary key attributes are required; you can optionally provide other attribute name-value pairs for the item. You must provide all of the attributes for the primary key. For example, with a simple primary key, you only need to provide a value for the partition key. For a composite primary key, you must provide both values for both the partition key and the sort key. If you specify any attributes that are part of an index key, then the data types for those attributes must match those of the schema in the table's attribute definition. Empty String and Binary attribute values are allowed. Attribute values of type String and Binary must have a length greater than zero if the attribute is used as a key attribute for a table or index. For more information about primary keys, see Primary Key in the Amazon DynamoDB Developer Guide. Each element in the Item map is an AttributeValue object.
    */
   Item: T;
 }
 
-export interface PutItemOutput<T = any> extends Omit<PutCommandOutput, 'Attributes' | '$metadata'> {
-  /**
-   * The attribute values as they appeared before the Put operation, but only if ReturnValues is specified as ALL_OLD in the request. Each element consists of an attribute name and an attribute value.
-   */
-  Attributes?: T;
-}
+export type PutItemOutput<T = DynamoRecord> = ResultWithOptionalAttributes<PutCommandOutput, T>;
 
 export interface QueryInput extends QueryCommandInput {}
 
-export interface QueryOutput<T = any> extends Omit<QueryCommandOutput, 'Items' | '$metadata'> {
-  /**
-   * An array of item attributes that match the query criteria. Each element in this array consists of an attribute name and the value for that attribute.
-   */
-  Items: T[];
-}
+export type QueryOutput<T = DynamoRecord> = ResultWithItems<QueryCommandOutput, T>;
 
 export interface UpdateInput extends UpdateCommandInput {}
 
-export interface UpdateOutput<T = any> extends Omit<UpdateCommandOutput, 'Attributes'> {
-  /**
-   * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
-   */
-  Attributes?: T;
-}
+export type UpdateOutput<T = DynamoRecord> = ResultWithOptionalAttributes<UpdateCommandOutput, T>;
 
 export interface DeleteItemInput extends DeleteCommandInput {}
 
-export interface DeleteItemOutput<T = any> extends Omit<DeleteCommandOutput, 'Attributes' | '$metadata'> {
-  /**
-   * A map of attribute values as they appear before or after the UpdateItem operation, as determined by the ReturnValues parameter. The Attributes map is only present if ReturnValues was specified as something other than NONE in the request. Each element represents one attribute.
-   */
-  Attributes?: T;
-}
+export type DeleteItemOutput<T = DynamoRecord> = ResultWithOptionalAttributes<DeleteCommandOutput, T>;
 
 export class DynamodbHelper {
   /** client instance */
@@ -131,7 +107,7 @@ export class DynamodbHelper {
   /**
    *
    */
-  get = async <T = any>(input: GetItemInput): Promise<GetItemOutput<T> | undefined> => {
+  get = async <T extends DynamoRecord = DynamoRecord>(input: GetItemInput): Promise<GetItemOutput<T> | undefined> => {
     try {
       const result = await this.getRequest(input);
 
@@ -153,7 +129,7 @@ export class DynamodbHelper {
   };
 
   /** Put */
-  private putRequest = <T extends Record<string, any>>(input: PutItemInput<T>): Promise<PutItemOutput> => {
+  private putRequest = <T extends DynamoRecord>(input: PutItemInput<T>): Promise<PutItemOutput> => {
     Logger.debug('dynamodb put item start...', input);
 
     const command = new PutCommand({
@@ -165,7 +141,7 @@ export class DynamodbHelper {
   };
 
   /** Put item */
-  put = async <T extends Record<string, any>>(input: PutItemInput<T>): Promise<PutItemOutput<T>> => {
+  put = async <T extends DynamoRecord>(input: PutItemInput<T>): Promise<PutItemOutput<T>> => {
     try {
       const result = await this.putRequest({ ...input, Item: input.Item });
 
@@ -181,7 +157,7 @@ export class DynamodbHelper {
   };
 
   /** Query */
-  private queryRequest = async <T = any>(input: QueryInput): Promise<QueryOutput> => {
+  private queryRequest = async <T extends DynamoRecord = DynamoRecord>(input: QueryInput): Promise<QueryOutput<T>> => {
     Logger.debug('dynamodb query start...', JSON.stringify(input));
 
     const command = new QueryCommand(input);
@@ -190,15 +166,15 @@ export class DynamodbHelper {
 
     return {
       ...results,
-      Items: results.Items as T[],
+      Items: (results.Items ??= []) as T[],
     };
   };
 
   /** Query */
-  query = async <T = any>(input: QueryInput): Promise<QueryOutput<T>> => {
+  query = async <T extends DynamoRecord = DynamoRecord>(input: QueryInput): Promise<QueryOutput<T>> => {
     try {
       // クエリ実行
-      const results = await this.queryRequest(input);
+      const results = await this.queryRequest<T>(input);
 
       // 上限ある場合、そのまま終了
       if (input.Limit && input.Limit === results.Count) {
@@ -264,7 +240,7 @@ export class DynamodbHelper {
   };
 
   /** Scan */
-  scanRequest = async <T = any>(input: ScanInput): Promise<ScanOutput> => {
+  scanRequest = async <T extends DynamoRecord = DynamoRecord>(input: ScanInput): Promise<ScanOutput<T>> => {
     Logger.debug('dynamodb scan start...', input);
 
     const command = new ScanCommand(input);
@@ -273,14 +249,14 @@ export class DynamodbHelper {
 
     return {
       ...results,
-      Items: results.Items as T[],
+      Items: (results.Items ??= []) as T[],
     };
   };
 
-  scan = async <T = any>(input: ScanInput): Promise<ScanOutput<T>> => {
+  scan = async <T extends DynamoRecord = DynamoRecord>(input: ScanInput): Promise<ScanOutput<T>> => {
     try {
       // クエリ実行
-      const results = await this.scanRequest(input);
+      const results = await this.scanRequest<T>(input);
 
       Logger.info('dynamodb scan success.', `Count=${results.Count}`, input);
       Logger.debug('dynamodb scan results', results);
@@ -343,7 +319,7 @@ export class DynamodbHelper {
     return this.getDocumentClient().send(command);
   };
 
-  delete = async <T = any>(input: DeleteItemInput): Promise<DeleteItemOutput<T>> => {
+  delete = async <T extends DynamoRecord = DynamoRecord>(input: DeleteItemInput): Promise<DeleteItemOutput<T>> => {
     try {
       Logger.debug('dynamodb delete start...', {
         TABLE_NAME: input.TableName,
@@ -378,10 +354,7 @@ export class DynamodbHelper {
   };
 
   /** バッチ削除リクエストを作成 */
-  private batchDeleteRequest = async (
-    tableName: string,
-    records: Record<string, NativeAttributeValue>[]
-  ): Promise<WriteRequest[][]> => {
+  private batchDeleteRequest = async (tableName: string, records: DynamoRecord[]): Promise<WriteRequest[][]> => {
     // テーブル情報を取得する
     const keySchema = await this.tableSchema(tableName);
 
@@ -421,7 +394,7 @@ export class DynamodbHelper {
   };
 
   /** バッチ登録リクエストを作成 */
-  private batchPutRequest = (records: Record<string, NativeAttributeValue>[]) => {
+  private batchPutRequest = (records: DynamoRecord[]) => {
     if (records.length === 0) return [];
 
     const requests: WriteRequest[][] = [];
@@ -492,7 +465,7 @@ export class DynamodbHelper {
   /**
    * 一括削除（全件削除）
    */
-  truncateAll = async (tableName: string, lastEvaluatedKey?: Record<string, NativeAttributeValue>) => {
+  truncateAll = async (tableName: string, lastEvaluatedKey?: DynamoRecord) => {
     const results = await this.scanRequest({
       TableName: tableName,
       ExclusiveStartKey: lastEvaluatedKey,
@@ -501,17 +474,17 @@ export class DynamodbHelper {
     // データが存在しない
     if (!results.Items || results.Items.length === 0) return;
 
-    await this.truncate(tableName, results.Items as any);
+    await this.truncate(tableName, results.Items as DynamoRecord[]);
 
-    if (!lastEvaluatedKey) {
-      await this.truncateAll(tableName, lastEvaluatedKey);
+    if (results.LastEvaluatedKey) {
+      await this.truncateAll(tableName, results.LastEvaluatedKey);
     }
   };
 
   /**
    * 一括削除（一部削除）
    */
-  truncate = async (tableName: string, records: Record<string, NativeAttributeValue>[]) => {
+  truncate = async (tableName: string, records: DynamoRecord[]) => {
     try {
       Logger.debug('dynamodb truncate start...', {
         TABLE_NAME: tableName,
@@ -535,7 +508,7 @@ export class DynamodbHelper {
   /**
    * 一括登録
    */
-  bulk = async (tableName: string, records: Record<string, NativeAttributeValue>[]) => {
+  bulk = async (tableName: string, records: DynamoRecord[]) => {
     try {
       Logger.debug('dynamodb bulk insert start...', {
         TABLE_NAME: tableName,
@@ -550,7 +523,7 @@ export class DynamodbHelper {
         TABLE_NAME: tableName,
       });
     } catch (err) {
-      Logger.error('dynamodb truncate error.', (err as any).message, tableName, err);
+      Logger.error('dynamodb bulk error.', (err as any).message, tableName, err);
       throw err;
     }
   };

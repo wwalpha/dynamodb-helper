@@ -3,11 +3,13 @@ import winston, { LoggerOptions } from 'winston';
 export type LoggerConfiguration = winston.LoggerOptions;
 
 export default class Logger {
-  private static logger = winston.createLogger({
+  private static readonly defaultOptions: LoggerOptions = {
     level: 'info',
     format: winston.format.json(),
     transports: [new winston.transports.Console()],
-  });
+  };
+
+  private static logger = winston.createLogger(Logger.defaultOptions);
 
   constructor() {}
 
@@ -42,6 +44,12 @@ export default class Logger {
   };
 
   static updateOptions = (options: LoggerOptions) => {
-    this.logger = winston.createLogger(options);
+    const mergedOptions: LoggerOptions = {
+      ...Logger.defaultOptions,
+      ...options,
+      transports: options.transports ?? Logger.defaultOptions.transports,
+    };
+
+    this.logger = winston.createLogger(mergedOptions);
   };
 }

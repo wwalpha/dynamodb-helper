@@ -1,6 +1,7 @@
 import winston, { LoggerOptions } from 'winston';
 export type LoggerConfiguration = winston.LoggerOptions;
 export default class Logger {
+    private static readonly defaultOptions;
     private static logger;
     constructor();
     static info: (message: any, ...args: any[]) => void;

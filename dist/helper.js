@@ -92,7 +92,7 @@ class DynamodbHelper {
         const results = await this.getDocumentClient().send(command);
         return {
             ...results,
-            Items: results.Items,
+            Items: (results.Items ??= []),
         };
     };
     /** Query */
@@ -160,7 +160,7 @@ class DynamodbHelper {
         const results = await this.getDocumentClient().send(command);
         return {
             ...results,
-            Items: results.Items,
+            Items: (results.Items ??= []),
         };
     };
     scan = async (input) => {
@@ -340,8 +340,8 @@ class DynamodbHelper {
         if (!results.Items || results.Items.length === 0)
             return;
         await this.truncate(tableName, results.Items);
-        if (!lastEvaluatedKey) {
-            await this.truncateAll(tableName, lastEvaluatedKey);
+        if (results.LastEvaluatedKey) {
+            await this.truncateAll(tableName, results.LastEvaluatedKey);
         }
     };
     /**
@@ -382,7 +382,7 @@ class DynamodbHelper {
             });
         }
         catch (err) {
-            logger_1.default.error('dynamodb truncate error.', err.message, tableName, err);
+            logger_1.default.error('dynamodb bulk error.', err.message, tableName, err);
             throw err;
         }
     };

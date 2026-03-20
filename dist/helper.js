@@ -8,10 +8,14 @@ const client_dynamodb_1 = require("@aws-sdk/client-dynamodb");
 const lib_dynamodb_1 = require("@aws-sdk/lib-dynamodb");
 const omit_1 = __importDefault(require("lodash/omit"));
 const client_1 = require("./client");
-const logger_1 = __importDefault(require("./logger"));
 const configs_1 = require("./configs");
+const logger_1 = __importDefault(require("./logger"));
+const BATCH_GET_LIMIT = 100;
+const BATCH_WRITE_LIMIT = 25;
+const DEFAULT_BATCH_RETRIES = 5;
+const DEFAULT_BULK_CONCURRENCY = 4;
+const DEFAULT_TRUNCATE_CONCURRENCY = 4;
 class DynamodbHelper {
-    /** client instance */
     configs = new configs_1.Configs();
     docClient;
     client;
@@ -20,40 +24,105 @@ class DynamodbHelper {
             this.configs.update(configs);
         }
     }
-    /** dynamodb client */
     getDocumentClient = () => {
         if (!this.docClient) {
             this.docClient = (0, client_1.documentClient)(this.configs.getOptions());
         }
         return this.docClient;
     };
-    /** dynamodb client */
     getClient = () => {
         if (!this.client) {
             this.client = (0, client_1.client)(this.configs.getOptions());
         }
         return this.client;
     };
-    /** Get */
+    stripMetadata = (result) => (0, omit_1.default)(result, ['$metadata']);
+    splitIntoChunks = (items, size) => {
+        const chunks = [];
+        for (let index = 0; index < items.length; index += size) {
+            chunks.push(items.slice(index, index + size));
+        }
+        return chunks;
+    };
+    collectAllPages = async (input, requestPage) => {
+        const items = [];
+        const totalLimit = input.Limit;
+        let accumulatedScannedCount = 0;
+        let lastPage;
+        let nextStartKey = input.ExclusiveStartKey;
+        let hasNextPage = true;
+        while (hasNextPage) {
+            const remainingLimit = totalLimit === undefined ? undefined : Math.max(totalLimit - items.length, 0);
+            if (remainingLimit === 0) {
+                break;
+            }
+            const pageInput = {
+                ...input,
+                ExclusiveStartKey: nextStartKey,
+                ...(remainingLimit === undefined ? {} : { Limit: remainingLimit }),
+            };
+            lastPage = await requestPage(pageInput);
+            items.push(...(lastPage.Items ?? []));
+            accumulatedScannedCount += lastPage.ScannedCount ?? 0;
+            nextStartKey = lastPage.LastEvaluatedKey;
+            hasNextPage = Boolean(nextStartKey);
+            if (totalLimit !== undefined && items.length >= totalLimit) {
+                break;
+            }
+        }
+        return {
+            ...this.stripMetadata(lastPage ?? {}),
+            Count: items.length,
+            Items: items,
+            LastEvaluatedKey: nextStartKey,
+            ...(lastPage && lastPage.ScannedCount !== undefined ? { ScannedCount: accumulatedScannedCount } : {}),
+        };
+    };
+    processWriteBatch = async (tableName, writeRequests, maxRetries) => {
+        let pendingItems = writeRequests;
+        for (let attempt = 0; pendingItems.length > 0; attempt += 1) {
+            const result = await this.getDocumentClient().send(new lib_dynamodb_1.BatchWriteCommand({
+                RequestItems: {
+                    [tableName]: pendingItems,
+                },
+            }));
+            pendingItems = result.UnprocessedItems?.[tableName] ?? [];
+            if (pendingItems.length === 0) {
+                return;
+            }
+            if (attempt >= maxRetries) {
+                throw new Error(`BatchWrite exceeded retry limit for ${tableName}. UnprocessedItems=${pendingItems.length}`);
+            }
+        }
+    };
+    processWriteRequests = async (tableName, requests, concurrency, maxRetries) => {
+        if (requests.length === 0) {
+            return;
+        }
+        const workerCount = Math.max(1, Math.min(concurrency, requests.length));
+        let nextIndex = 0;
+        const runWorker = async () => {
+            while (nextIndex < requests.length) {
+                const currentIndex = nextIndex;
+                nextIndex += 1;
+                await this.processWriteBatch(tableName, requests[currentIndex], maxRetries);
+            }
+        };
+        await Promise.all(Array.from({ length: workerCount }, () => runWorker()));
+    };
     getRequest = (input) => {
         logger_1.default.debug('dynamodb get item start...', input);
-        const command = new lib_dynamodb_1.GetCommand(input);
-        return this.getDocumentClient().send(command);
+        return this.getDocumentClient().send(new lib_dynamodb_1.GetCommand(input));
     };
-    /**
-     *
-     */
     get = async (input) => {
         try {
             const result = await this.getRequest(input);
-            // データが存在しない
-            if (!result.Item)
+            if (!result.Item) {
                 return;
+            }
             logger_1.default.debug('dynamodb get item success.', input);
-            logger_1.default.debug('Dynamodb ConsumedCapacity: ', result.ConsumedCapacity);
-            logger_1.default.debug('Dynamodb item: ', JSON.stringify(result.Item));
             return {
-                ...(0, omit_1.default)(result, ['$metadata']),
+                ...this.stripMetadata(result),
                 Item: result.Item,
             };
         }
@@ -62,21 +131,16 @@ class DynamodbHelper {
             throw err;
         }
     };
-    /** Put */
     putRequest = (input) => {
         logger_1.default.debug('dynamodb put item start...', input);
-        const command = new lib_dynamodb_1.PutCommand({
-            ...input,
-            Item: input.Item,
-        });
-        return this.getDocumentClient().send(command);
+        return this.getDocumentClient().send(new lib_dynamodb_1.PutCommand(input));
     };
-    /** Put item */
     put = async (input) => {
         try {
-            const result = await this.putRequest({ ...input, Item: input.Item });
+            const result = await this.putRequest(input);
             logger_1.default.debug('dynamodb put item success.', input);
             return {
+                ...this.stripMetadata(result),
                 Attributes: result.Attributes,
             };
         }
@@ -85,66 +149,41 @@ class DynamodbHelper {
             throw err;
         }
     };
-    /** Query */
     queryRequest = async (input) => {
-        logger_1.default.debug('dynamodb query start...', JSON.stringify(input));
-        const command = new lib_dynamodb_1.QueryCommand(input);
-        const results = await this.getDocumentClient().send(command);
+        logger_1.default.debug('dynamodb query page start...', JSON.stringify(input));
+        const result = await this.getDocumentClient().send(new lib_dynamodb_1.QueryCommand(input));
         return {
-            ...results,
-            Items: (results.Items ??= []),
+            ...this.stripMetadata(result),
+            Items: (result.Items ?? []),
         };
     };
-    /** Query */
-    query = async (input) => {
+    queryPage = async (input) => {
         try {
-            // クエリ実行
-            const results = await this.queryRequest(input);
-            // 上限ある場合、そのまま終了
-            if (input.Limit && input.Limit === results.Count) {
-                logger_1.default.info('dynamodb query success.', `Count=${results.Count}`, JSON.stringify(input));
-                logger_1.default.debug('dynamodb query items.', JSON.stringify(results), JSON.stringify(results.Items));
-                return {
-                    ...(0, omit_1.default)(results, ['$metadata']),
-                    Items: (results.Items ??= []),
-                };
-            }
-            if (results.LastEvaluatedKey) {
-                const lastResult = await this.query({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
-                if (results.Items && lastResult.Items) {
-                    results.Items = results.Items.concat(lastResult.Items);
-                }
-                if (results.Count && lastResult.Count) {
-                    results.Count = results.Count + lastResult.Count;
-                }
-                if (results.ScannedCount && lastResult.ScannedCount) {
-                    results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
-                }
-            }
-            logger_1.default.info('dynamodb query success.', `Count=${results.Count}`, input);
-            logger_1.default.debug('dynamodb query items.', results, results.Items);
-            // 上限ある場合、そのまま終了
-            if (input.Limit && input.Limit === results.Count) {
-                return {
-                    ...(0, omit_1.default)(results, ['$metadata']),
-                    Items: (results.Items ??= []),
-                };
-            }
-            return {
-                ...(0, omit_1.default)(results, ['$metadata']),
-                Items: results.Items,
-            };
+            const result = await this.queryRequest(input);
+            logger_1.default.info('dynamodb query page success.', `Count=${result.Count ?? result.Items.length}`, input);
+            return result;
+        }
+        catch (err) {
+            logger_1.default.error('dynamodb query page error.', err.message, input, err);
+            throw err;
+        }
+    };
+    queryAll = async (input) => {
+        try {
+            const result = await this.collectAllPages(input, (pageInput) => this.queryRequest(pageInput));
+            logger_1.default.info('dynamodb query success.', `Count=${result.Count}`, input);
+            return result;
         }
         catch (err) {
             logger_1.default.error('dynamodb query error.', err.message, input, err);
             throw err;
         }
     };
+    query = async (input) => this.queryAll(input);
     transactWrite = async (input) => {
         try {
             logger_1.default.debug('dynamodb transactWrite start...', input);
-            const command = new lib_dynamodb_1.TransactWriteCommand(input);
-            const result = await this.getDocumentClient().send(command);
+            const result = await this.getDocumentClient().send(new lib_dynamodb_1.TransactWriteCommand(input));
             logger_1.default.debug('dynamodb transactWrite success', input);
             return result;
         }
@@ -153,68 +192,58 @@ class DynamodbHelper {
             throw err;
         }
     };
-    /** Scan */
     scanRequest = async (input) => {
-        logger_1.default.debug('dynamodb scan start...', input);
-        const command = new lib_dynamodb_1.ScanCommand(input);
-        const results = await this.getDocumentClient().send(command);
+        logger_1.default.debug('dynamodb scan page start...', input);
+        const result = await this.getDocumentClient().send(new lib_dynamodb_1.ScanCommand(input));
         return {
-            ...results,
-            Items: (results.Items ??= []),
+            ...this.stripMetadata(result),
+            Items: (result.Items ?? []),
         };
     };
-    scan = async (input) => {
+    scanPage = async (input) => {
         try {
-            // クエリ実行
-            const results = await this.scanRequest(input);
-            logger_1.default.info('dynamodb scan success.', `Count=${results.Count}`, input);
-            logger_1.default.debug('dynamodb scan results', results);
-            if (results.LastEvaluatedKey) {
-                const lastResult = await this.scan({ ...input, ExclusiveStartKey: results.LastEvaluatedKey });
-                if (results.Items && lastResult.Items) {
-                    results.Items = results.Items.concat(lastResult.Items);
-                }
-                if (results.Count && lastResult.Count) {
-                    results.Count = results.Count + lastResult.Count;
-                }
-                if (results.ScannedCount && lastResult.ScannedCount) {
-                    results.ScannedCount = results.ScannedCount + lastResult.ScannedCount;
-                }
-            }
-            // 検索結果出力
-            logger_1.default.debug('dynamodb scan results', results);
-            return {
-                ...(0, omit_1.default)(results, ['$metadata']),
-                Items: (results.Items ??= []),
-            };
+            const result = await this.scanRequest(input);
+            logger_1.default.info('dynamodb scan page success.', `Count=${result.Count ?? result.Items.length}`, input);
+            return result;
+        }
+        catch (err) {
+            logger_1.default.error('dynamodb scan page error.', err.message, input, err);
+            throw err;
+        }
+    };
+    scanAll = async (input) => {
+        try {
+            const result = await this.collectAllPages(input, (pageInput) => this.scanRequest(pageInput));
+            logger_1.default.info('dynamodb scan success.', `Count=${result.Count}`, input);
+            return result;
         }
         catch (err) {
             logger_1.default.error('dynamodb scan error.', err.message, input, err);
             throw err;
         }
     };
-    /** Update */
+    scan = async (input) => this.scanAll(input);
     updateRequest = (input) => {
         logger_1.default.debug('dynamodb update start...', input);
-        const command = new lib_dynamodb_1.UpdateCommand(input);
-        return this.getDocumentClient().send(command);
+        return this.getDocumentClient().send(new lib_dynamodb_1.UpdateCommand(input));
     };
     update = async (input) => {
         try {
             const result = await this.updateRequest(input);
             logger_1.default.debug('dynamodb update success...', input);
-            return result;
+            return {
+                ...this.stripMetadata(result),
+                Attributes: result.Attributes,
+            };
         }
         catch (err) {
             logger_1.default.error('dynamodb update error.', err.message, input, err);
             throw err;
         }
     };
-    /** Delete */
     deleteRequest = (input) => {
         logger_1.default.debug('dynamodb delete item input', input);
-        const command = new lib_dynamodb_1.DeleteCommand(input);
-        return this.getDocumentClient().send(command);
+        return this.getDocumentClient().send(new lib_dynamodb_1.DeleteCommand(input));
     };
     delete = async (input) => {
         try {
@@ -226,7 +255,7 @@ class DynamodbHelper {
                 TABLE_NAME: input.TableName,
             });
             return {
-                ...(0, omit_1.default)(result, ['$metadata']),
+                ...this.stripMetadata(result),
                 Attributes: result.Attributes,
             };
         }
@@ -235,127 +264,87 @@ class DynamodbHelper {
             throw err;
         }
     };
-    /** テーブル情報を取得する */
+    batchGet = async (tableName, keys, options = {}) => {
+        const { maxRetries = DEFAULT_BATCH_RETRIES, ...requestOptions } = options;
+        if (keys.length === 0) {
+            return [];
+        }
+        const chunks = this.splitIntoChunks(keys, BATCH_GET_LIMIT);
+        const items = [];
+        for (const chunk of chunks) {
+            let pendingKeys = chunk;
+            for (let attempt = 0; pendingKeys.length > 0; attempt += 1) {
+                const result = await this.getDocumentClient().send(new lib_dynamodb_1.BatchGetCommand({
+                    ...requestOptions,
+                    RequestItems: {
+                        [tableName]: {
+                            Keys: pendingKeys,
+                        },
+                    },
+                }));
+                items.push(...(result.Responses?.[tableName] ?? []));
+                pendingKeys = (result.UnprocessedKeys?.[tableName]?.Keys ?? []);
+                if (pendingKeys.length === 0) {
+                    break;
+                }
+                if (attempt >= maxRetries) {
+                    throw new Error(`BatchGet exceeded retry limit for ${tableName}. UnprocessedKeys=${pendingKeys.length}`);
+                }
+            }
+        }
+        return items;
+    };
     tableSchema = async (tableName) => {
         const table = await this.getClient().send(new client_dynamodb_1.DescribeTableCommand({ TableName: tableName }));
-        // 存在チェック
-        if (!table.Table || !table.Table.KeySchema) {
-            throw new Error(`Table is not exists. ${tableName}`);
+        if (!table.Table?.KeySchema) {
+            throw new Error(`Table does not exist. ${tableName}`);
         }
         return table.Table.KeySchema;
     };
-    /** バッチ削除リクエストを作成 */
     batchDeleteRequest = async (tableName, records) => {
-        // テーブル情報を取得する
         const keySchema = await this.tableSchema(tableName);
-        const keys = keySchema.map((item) => item.AttributeName);
-        const requests = [];
-        const writeRequests = [];
-        // リクエストを作成する
-        for (let idx = 0; idx < records.length; idx = idx + 1) {
-            const item = records[idx];
-            const keyItem = {};
-            // Primary key
-            keys.forEach((key) => {
-                keyItem[key] = item[key];
-            });
-            writeRequests.push({
+        const keyNames = keySchema.map((item) => item.AttributeName).filter((item) => Boolean(item));
+        const writeRequests = records.map((record) => {
+            const key = keyNames.reduce((result, keyName) => {
+                result[keyName] = record[keyName];
+                return result;
+            }, {});
+            return {
                 DeleteRequest: {
-                    Key: keyItem,
+                    Key: key,
                 },
-            });
-            // 25件ごと、requestを作成する
-            if (writeRequests.length === 25) {
-                requests.push([...writeRequests]);
-                writeRequests.length = 0;
-            }
-        }
-        // 最後の件も追加する
-        if (writeRequests.length > 0) {
-            requests.push([...writeRequests]);
-        }
-        return requests;
-    };
-    /** バッチ登録リクエストを作成 */
-    batchPutRequest = (records) => {
-        if (records.length === 0)
-            return [];
-        const requests = [];
-        const writeRequests = [];
-        // リクエストを作成する
-        for (let idx = 0; idx < records.length; idx = idx + 1) {
-            const item = records[idx];
-            writeRequests.push({
-                PutRequest: {
-                    Item: item,
-                },
-            });
-            // 25件ごと、requestを作成する
-            if (writeRequests.length === 25) {
-                requests.push([...writeRequests]);
-                writeRequests.length = 0;
-            }
-        }
-        // 最後の件も追加する
-        if (writeRequests.length > 0) {
-            requests.push([...writeRequests]);
-        }
-        return requests;
-    };
-    /** バッチリクエストを実行する */
-    process = async (tableName, requests) => {
-        if (requests.length === 0)
-            return;
-        const tasks = requests.map((item, idx) => new Promise(async (resolve) => {
-            logger_1.default.debug(`Queue${idx + 1}, in flight items: ${item.length}`);
-            let unprocessed = {
-                [tableName]: item,
             };
-            for (; Object.keys(unprocessed).length > 0 && unprocessed[tableName].length !== 0;) {
-                const command = new lib_dynamodb_1.BatchWriteCommand({
-                    RequestItems: unprocessed,
-                });
-                const results = await this.getDocumentClient().send(command);
-                const items = results.UnprocessedItems;
-                // 未処理レコードが存在しない
-                if (items === undefined || items[tableName] === undefined || items[tableName].length === 0) {
-                    resolve();
-                    return;
-                }
-                unprocessed = items;
-            }
-        }));
-        // delete all
-        await Promise.all(tasks);
-    };
-    /**
-     * 一括削除（全件削除）
-     */
-    truncateAll = async (tableName, lastEvaluatedKey) => {
-        const results = await this.scanRequest({
-            TableName: tableName,
-            ExclusiveStartKey: lastEvaluatedKey,
         });
-        // データが存在しない
-        if (!results.Items || results.Items.length === 0)
-            return;
-        await this.truncate(tableName, results.Items);
-        if (results.LastEvaluatedKey) {
-            await this.truncateAll(tableName, results.LastEvaluatedKey);
-        }
+        return this.splitIntoChunks(writeRequests, BATCH_WRITE_LIMIT);
     };
-    /**
-     * 一括削除（一部削除）
-     */
+    batchPutRequest = (records) => {
+        const writeRequests = records.map((record) => ({
+            PutRequest: {
+                Item: record,
+            },
+        }));
+        return this.splitIntoChunks(writeRequests, BATCH_WRITE_LIMIT);
+    };
+    truncateAll = async (tableName, lastEvaluatedKey) => {
+        let nextStartKey = lastEvaluatedKey;
+        do {
+            const page = await this.scanPage({
+                TableName: tableName,
+                ExclusiveStartKey: nextStartKey,
+            });
+            if (page.Items.length > 0) {
+                await this.truncate(tableName, page.Items);
+            }
+            nextStartKey = page.LastEvaluatedKey;
+        } while (nextStartKey);
+    };
     truncate = async (tableName, records) => {
         try {
             logger_1.default.debug('dynamodb truncate start...', {
                 TABLE_NAME: tableName,
             });
-            // リクエスト作成
             const requests = await this.batchDeleteRequest(tableName, records);
-            // キューでリクエスト実行
-            await this.process(tableName, requests);
+            await this.processWriteRequests(tableName, requests, 1, DEFAULT_BATCH_RETRIES);
             logger_1.default.debug('dynamodb truncate finished...', {
                 TABLE_NAME: tableName,
             });
@@ -365,24 +354,40 @@ class DynamodbHelper {
             throw err;
         }
     };
-    /**
-     * 一括登録
-     */
+    truncateConcurrent = async (tableName, records, options = {}) => {
+        const resolvedOptions = typeof options === 'number' ? { concurrency: options } : options;
+        const concurrency = resolvedOptions.concurrency ?? DEFAULT_TRUNCATE_CONCURRENCY;
+        const maxRetries = resolvedOptions.maxRetries ?? DEFAULT_BATCH_RETRIES;
+        try {
+            logger_1.default.debug('dynamodb truncate concurrent start...', {
+                TABLE_NAME: tableName,
+                CONCURRENCY: concurrency,
+            });
+            const requests = await this.batchDeleteRequest(tableName, records);
+            await this.processWriteRequests(tableName, requests, concurrency, maxRetries);
+            logger_1.default.debug('dynamodb truncate concurrent finished...', {
+                TABLE_NAME: tableName,
+                CONCURRENCY: concurrency,
+            });
+        }
+        catch (err) {
+            logger_1.default.error('dynamodb truncate concurrent error.', err.message, tableName, err);
+            throw err;
+        }
+    };
     bulk = async (tableName, records) => {
         try {
             logger_1.default.debug('dynamodb bulk insert start...', {
                 TABLE_NAME: tableName,
             });
-            // リクエスト作成
             const requests = this.batchPutRequest(records);
-            // キューでリクエスト実行
-            await this.process(tableName, requests);
-            logger_1.default.debug('dynamodb bulk insert finished...', {
+            await this.processWriteRequests(tableName, requests, DEFAULT_BULK_CONCURRENCY, DEFAULT_BATCH_RETRIES);
+            logger_1.default.debug('dynamodb bulk insert success...', {
                 TABLE_NAME: tableName,
             });
         }
         catch (err) {
-            logger_1.default.error('dynamodb bulk error.', err.message, tableName, err);
+            logger_1.default.error('dynamodb bulk insert error.', err.message, tableName, err);
             throw err;
         }
     };

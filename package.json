@@ -13,7 +13,7 @@
     "prebuild": "rm -rf dist",
     "build": "tsc -p tsconfig.build.json",
     "pretest": "docker rm -f dynamodb-helper-local >/dev/null 2>&1 || true && docker run -d --name dynamodb-helper-local -p 8000:8000 amazon/dynamodb-local -jar DynamoDBLocal.jar -inMemory -sharedDb",
-    "test": "jest --runInBand",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
     "posttest": "docker rm -f dynamodb-helper-local >/dev/null 2>&1 || true"
   },
   "devDependencies": {

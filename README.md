@@ -10,15 +10,15 @@ npm i @alphax/dynamodb
 
 ## Version Policy
 
-This package keeps AWS SDK dependencies on the `3.650.0` line instead of `latest`.
+This package tracks current AWS SDK releases.
 
 - `@aws-sdk/client-dynamodb`
 - `@aws-sdk/lib-dynamodb`
 - `@aws-sdk/util-dynamodb`
 
-The reason is runtime stability in CommonJS and Jest node environments. Newer Smithy builds introduce dynamic `import()` paths in credential and defaults resolution, which can fail under the standard `ts-jest` + `testEnvironment: 'node'` execution model. The `3.650.0` line avoids that behavior while keeping the helper compatible with DynamoDB Local, LocalStack, and AWS.
+Current Smithy builds introduce dynamic `import()` paths in credential and defaults resolution. Because of that, Jest must run with Node's VM modules support enabled when you test this package with the latest AWS SDK line.
 
-`lodash` and `winston` are also pinned to semver ranges instead of `latest` to avoid accidental runtime drift.
+The package's `npm test` / `yarn test` script already enables that runtime flag for you.
 
 ## Client Defaults
 
@@ -28,7 +28,7 @@ The helper now applies these defaults when you create a client:
 - credentials from `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` when present
 - local placeholder credentials when `endpoint` is set and explicit credentials are not provided
 
-That keeps local tests working in Jest without requiring `NODE_OPTIONS=--experimental-vm-modules`.
+That keeps local DynamoDB access simple, but Jest still needs VM modules enabled when using the latest AWS SDK packages.
 
 ## Usage
 
@@ -125,6 +125,14 @@ The test suite uses Jest with `testEnvironment: 'node'` and DynamoDB Local in Do
 npm test
 ```
 
+The test script runs Jest through:
+
+```bash
+node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand
+```
+
+That flag is required with the latest AWS SDK / Smithy dependency tree.
+
 It covers:
 
 - CRUD
@@ -132,4 +140,4 @@ It covers:
 - bulk writes
 - truncate and truncateConcurrent
 - batchGet
-- Jest node runtime compatibility
+- Jest node runtime compatibility with VM modules enabled
